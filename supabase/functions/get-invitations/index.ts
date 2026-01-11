@@ -103,8 +103,8 @@ serve(async (req) => {
         user_id: invitation.user_one_id,
         nickname: profile?.name || profile?.custom_user_id || 'Unknown User',
         image_url: profile?.image_url || null,
-        created_at: invitation.created_at,
-        updated_at: invitation.updated_at,
+        created_at: invitation.created_at, // Already in timestamp format from DB
+        updated_at: invitation.updated_at, // Already in timestamp format from DB
       };
     });
 

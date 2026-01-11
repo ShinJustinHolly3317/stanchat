@@ -275,9 +275,9 @@
       
       const firstLetter = (invitation.nickname || 'U')[0].toUpperCase();
       
-      // 格式化時間
+      // 格式化時間 (created_at 現在是 timestamp，直接使用)
       const createdAt = invitation.created_at
-        ? new Date(invitation.created_at * 1000).toLocaleDateString()
+        ? new Date(invitation.created_at).toLocaleDateString()
         : '';
       
       item.innerHTML = `

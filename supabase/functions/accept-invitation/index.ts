@@ -83,7 +83,7 @@ serve(async (req) => {
     }
 
     // 查詢 friendship 記錄
-    // 確保 currentUserId 是接收方 (user_two_id)
+    // 由於記錄是排序的（較小的 ID 在 user_one_id），需要檢查兩個方向
     const userId1 = targetUserId < currentUserId ? targetUserId : currentUserId;
     const userId2 = targetUserId < currentUserId ? currentUserId : targetUserId;
 
@@ -116,8 +116,14 @@ serve(async (req) => {
       });
     }
 
-    // 確認當前使用者是接收方 (user_two_id 應該是 currentUserId)
-    if (friendship.user_one_id !== targetUserId || friendship.user_two_id !== currentUserId) {
+    // 確認當前使用者是接收方
+    // 由於記錄是排序的（較小的 ID 在 user_one_id），接收方可能是 user_one_id 或 user_two_id
+    // 發送者是 targetUserId，接收者是 currentUserId
+    const isCurrentUserReceiver =
+      (friendship.user_one_id === currentUserId && friendship.user_two_id === targetUserId) ||
+      (friendship.user_one_id === targetUserId && friendship.user_two_id === currentUserId);
+
+    if (!isCurrentUserReceiver) {
       return new Response(
         JSON.stringify({ error: 'You are not the recipient of this invitation' }),
         {
@@ -127,31 +133,97 @@ serve(async (req) => {
       );
     }
 
-    const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+    const now = new Date().toISOString(); // ISO 8601 timestamp
     let roomId = null;
 
     if (action === 'accept') {
       // 接受邀請：更新狀態為 friend
-      const { error: updateError } = await supabase
+      // 使用 friendship 記錄中的實際 ID 來更新（確保匹配）
+      console.log('Updating friendship:', {
+        friendship_user_one: friendship.user_one_id,
+        friendship_user_two: friendship.user_two_id,
+        friendship_status: friendship.status,
+        userId1,
+        userId2,
+        currentUserId,
+        targetUserId,
+      });
+
+      // 先確認記錄仍然存在且狀態為 pending
+      const { data: verifyFriendship, error: verifyError } = await supabase
+        .from('friendships')
+        .select('user_one_id, user_two_id, status')
+        .eq('user_one_id', friendship.user_one_id)
+        .eq('user_two_id', friendship.user_two_id)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (verifyError) {
+        console.error('Verify error:', verifyError);
+        return new Response(
+          JSON.stringify({ error: `Failed to verify invitation: ${verifyError.message}` }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+          }
+        );
+      }
+
+      if (!verifyFriendship) {
+        console.log('Friendship not found or status changed');
+        return new Response(
+          JSON.stringify({ error: 'Invitation not found or already processed' }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
+      }
+
+      // 執行更新 - 使用 service role key 來 bypass RLS
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+      const { data: updatedFriendship, error: updateError } = await serviceClient
         .from('friendships')
         .update({
           status: 'friend',
           updated_at: now,
         })
-        .eq('user_one_id', userId1)
-        .eq('user_two_id', userId2);
+        .eq('user_one_id', friendship.user_one_id)
+        .eq('user_two_id', friendship.user_two_id)
+        .eq('status', 'pending') // 確保只更新 pending 狀態的記錄
+        .select()
+        .maybeSingle();
 
       if (updateError) {
-        return new Response(JSON.stringify({ error: 'Failed to accept invitation' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        });
+        console.error('Update error:', updateError);
+        return new Response(
+          JSON.stringify({ error: `Failed to accept invitation: ${updateError.message}` }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+          }
+        );
       }
+
+      // 確認更新是否成功（有資料被更新）
+      if (!updatedFriendship) {
+        console.log('No rows updated - status might have changed');
+        return new Response(
+          JSON.stringify({ error: 'Invitation not found or already processed' }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 404,
+          }
+        );
+      }
+
+      console.log('Friendship updated successfully:', updatedFriendship);
 
       // 建立聊天室 (如果需要)
       // 這裡假設 chat_channels 表存在，且 channel_type 有 'direct' 選項
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      // serviceClient 已經在上面建立了
 
       // 建立 direct message channel
       const { data: channel, error: channelError } = await serviceClient
@@ -184,11 +256,15 @@ serve(async (req) => {
       }
     } else {
       // 拒絕邀請：刪除記錄或更新狀態
-      const { error: deleteError } = await supabase
+      // 使用 service role key 來 bypass RLS
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+      const { error: deleteError } = await serviceClient
         .from('friendships')
         .delete()
-        .eq('user_one_id', userId1)
-        .eq('user_two_id', userId2);
+        .eq('user_one_id', friendship.user_one_id)
+        .eq('user_two_id', friendship.user_two_id);
 
       if (deleteError) {
         return new Response(JSON.stringify({ error: 'Failed to decline invitation' }), {
@@ -198,9 +274,7 @@ serve(async (req) => {
       }
 
       // 發送通知給發送邀請的使用者
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-
+      // serviceClient 已經在上面建立了
       await serviceClient.channel(`user:${targetUserId}`).send({
         type: 'broadcast',
         event: 'friend_request_declined',

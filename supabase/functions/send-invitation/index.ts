@@ -128,7 +128,7 @@ serve(async (req) => {
     }
 
     // 建立或更新 friendship 記錄
-    const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+    const now = new Date().toISOString(); // ISO 8601 timestamp
 
     let result;
     if (existingFriendship) {
