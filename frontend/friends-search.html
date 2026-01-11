@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Friends - StanChat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .nav-links a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .nav-links a:hover {
+      background: #f5f5f5;
+    }
+    
+    .search-card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .search-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    
+    .search-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .result-card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+    
+    .result-card.show {
+      display: block;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .user-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 24px;
+    }
+    
+    .user-details h3 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .user-details p {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    
+    .status-none {
+      background: #e0e0e0;
+      color: #666;
+    }
+    
+    .status-pending-sent {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .status-pending-received {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    .status-friend {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status-blocked {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #218838;
+    }
+    
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .error.show {
+      display: block;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    
+    .empty-state::before {
+      content: "🔍";
+      font-size: 48px;
+      display: block;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Search Friends</h1>
+      <div class="nav-links">
+        <a href="welcome.html">Home</a>
+        <a href="friends-invitations.html">Invitations</a>
+        <a href="friends-list.html">Friends</a>
+      </div>
+    </div>
+    
+    <div class="search-card">
+      <h2 style="margin-bottom: 20px; color: #333;">Search for Users</h2>
+      <div class="error" id="error"></div>
+      
+      <form class="search-form" id="searchForm">
+        <input 
+          type="text" 
+          class="search-input" 
+          id="searchInput" 
+          placeholder="Enter user ID, email, or name..."
+          required
+        >
+        <button type="submit" class="btn btn-primary" id="searchBtn">Search</button>
+      </form>
+    </div>
+    
+    <div class="result-card" id="resultCard">
+      <div class="user-info">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-details">
+          <h3 id="userName">User Name</h3>
+          <p id="userId">User ID</p>
+          <span class="status-badge" id="statusBadge">none</span>
+        </div>
+      </div>
+      
+      <div class="action-buttons" id="actionButtons">
+        <!-- Buttons will be dynamically added -->
+      </div>
+    </div>
+    
+    <div class="empty-state" id="emptyState">
+      Search for users to add as friends
+    </div>
+  </div>
+
+  <script type="module">
+    import FriendsAPI from './friends-api.js';
+    
+    const searchForm = document.getElementById('searchForm');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const errorDiv = document.getElementById('error');
+    const resultCard = document.getElementById('resultCard');
+    const emptyState = document.getElementById('emptyState');
+    const userAvatar = document.getElementById('userAvatar');
+    const userName = document.getElementById('userName');
+    const userId = document.getElementById('userId');
+    const statusBadge = document.getElementById('statusBadge');
+    const actionButtons = document.getElementById('actionButtons');
+    
+    let currentResult = null;
+    
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+      setTimeout(() => {
+        errorDiv.classList.remove('show');
+      }, 5000);
+    }
+    
+    function hideError() {
+      errorDiv.classList.remove('show');
+    }
+    
+    function getStatusClass(status) {
+      const statusMap = {
+        'none': 'status-none',
+        'pending_sent': 'status-pending-sent',
+        'pending_received': 'status-pending-received',
+        'friend': 'status-friend',
+        'blocked': 'status-blocked',
+      };
+      return statusMap[status] || 'status-none';
+    }
+    
+    function getStatusText(status) {
+      const statusMap = {
+        'none': 'No relationship',
+        'pending_sent': 'Invitation sent',
+        'pending_received': 'Invitation received',
+        'friend': 'Friends',
+        'blocked': 'Blocked',
+      };
+      return statusMap[status] || status;
+    }
+    
+    function renderResult(result) {
+      currentResult = result;
+      emptyState.style.display = 'none';
+      resultCard.classList.add('show');
+      
+      const user = result.user;
+      userAvatar.textContent = (user.nickname || 'U')[0].toUpperCase();
+      userName.textContent = user.nickname || 'Unknown';
+      userId.textContent = `ID: ${user.id}`;
+      
+      const status = result.relationship_status;
+      statusBadge.textContent = getStatusText(status);
+      statusBadge.className = `status-badge ${getStatusClass(status)}`;
+      
+      // 根據狀態顯示按鈕
+      actionButtons.innerHTML = '';
+      
+      if (status === 'none') {
+        const sendBtn = document.createElement('button');
+        sendBtn.className = 'btn btn-primary';
+        sendBtn.textContent = 'Send Friend Request';
+        sendBtn.onclick = () => handleSendInvitation(user.id);
+        actionButtons.appendChild(sendBtn);
+      } else if (status === 'pending_sent') {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary';
+        cancelBtn.textContent = 'Cancel Request';
+        cancelBtn.onclick = () => alert('Cancel functionality not implemented yet');
+        actionButtons.appendChild(cancelBtn);
+      } else if (status === 'pending_received') {
+        const acceptBtn = document.createElement('button');
+        acceptBtn.className = 'btn btn-success';
+        acceptBtn.textContent = 'Accept';
+        acceptBtn.onclick = () => handleAcceptInvitation(user.id, 'accept');
+        
+        const declineBtn = document.createElement('button');
+        declineBtn.className = 'btn btn-secondary';
+        declineBtn.textContent = 'Decline';
+        declineBtn.onclick = () => handleAcceptInvitation(user.id, 'decline');
+        
+        actionButtons.appendChild(acceptBtn);
+        actionButtons.appendChild(declineBtn);
+      } else if (status === 'friend') {
+        const chatBtn = document.createElement('button');
+        chatBtn.className = 'btn btn-primary';
+        chatBtn.textContent = 'Start Chat';
+        chatBtn.onclick = () => alert('Chat functionality not implemented yet');
+        actionButtons.appendChild(chatBtn);
+      }
+    }
+    
+    async function handleSendInvitation(targetUserId) {
+      try {
+        searchBtn.disabled = true;
+        await FriendsAPI.sendInvitation(targetUserId);
+        alert('Friend request sent!');
+        // 重新搜尋以更新狀態
+        searchForm.dispatchEvent(new Event('submit'));
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        searchBtn.disabled = false;
+      }
+    }
+    
+    async function handleAcceptInvitation(senderUserId, action) {
+      try {
+        const result = await FriendsAPI.acceptInvitation(senderUserId, action);
+        if (action === 'accept' && result.room_id) {
+          alert(`Friend request accepted! Room ID: ${result.room_id}`);
+        } else {
+          alert(`Friend request ${action === 'accept' ? 'accepted' : 'declined'}`);
+        }
+        // 重新搜尋以更新狀態
+        if (currentResult) {
+          searchInput.value = currentResult.user.id;
+          searchForm.dispatchEvent(new Event('submit'));
+        }
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+    
+    searchForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+      
+      const query = searchInput.value.trim();
+      if (!query) {
+        showError('Please enter a search query');
+        return;
+      }
+      
+      searchBtn.disabled = true;
+      searchBtn.textContent = 'Searching...';
+      
+      try {
+        const result = await FriendsAPI.searchFriend(query);
+        renderResult(result);
+      } catch (error) {
+        showError(error.message);
+        resultCard.classList.remove('show');
+        emptyState.style.display = 'block';
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = 'Search';
+      }
+    });
+  </script>
+</body>
+</html>

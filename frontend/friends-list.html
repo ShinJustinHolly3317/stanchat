@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friends List - StanChat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .nav-links a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .nav-links a:hover {
+      background: #f5f5f5;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .friend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+      transition: background 0.2s;
+    }
+    
+    .friend-item:hover {
+      background: #f0f0f0;
+    }
+    
+    .friend-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .friend-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .friend-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    
+    .friend-details h3 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .friend-details p {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .friend-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    
+    .empty-state::before {
+      content: "👥";
+      font-size: 48px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>My Friends</h1>
+      <div class="nav-links">
+        <a href="welcome.html">Home</a>
+        <a href="friends-search.html">Search</a>
+        <a href="friends-invitations.html">Invitations</a>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Friends List</h2>
+      <div class="loading" id="loading">Loading friends...</div>
+      <div id="friendsList"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { SUPABASE_CONFIG } from './config.js';
+    
+    const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    const friendsList = document.getElementById('friendsList');
+    const loading = document.getElementById('loading');
+    
+    async function loadFriends() {
+      try {
+        loading.style.display = 'block';
+        friendsList.innerHTML = '';
+        
+        // 取得當前使用者
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!session) {
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        const currentUserId = session.user.id;
+        
+        // 從資料庫查詢好友列表
+        // 注意：這裡需要實際的資料庫查詢
+        // 實際應該查詢 friendships 表，status = 'friend' 且 (user_one_id = currentUserId OR user_two_id = currentUserId)
+        
+        // 模擬：顯示提示訊息
+        friendsList.innerHTML = `
+          <div class="empty-state">
+            <p>No friends yet</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #999;">
+              Note: This page requires database queries to show actual friends list.
+              Use the Search page to find and add friends.
+            </p>
+          </div>
+        `;
+        
+        loading.style.display = 'none';
+      } catch (error) {
+        console.error('Error loading friends:', error);
+        friendsList.innerHTML = `
+          <div class="empty-state">
+            <p>Error loading friends</p>
+          </div>
+        `;
+        loading.style.display = 'none';
+      }
+    }
+    
+    function renderFriend(friend) {
+      const item = document.createElement('div');
+      item.className = 'friend-item';
+      
+      const firstLetter = (friend.nickname || 'U')[0].toUpperCase();
+      
+      item.innerHTML = `
+        <div class="friend-info">
+          <div class="friend-avatar">${firstLetter}</div>
+          <div class="friend-details">
+            <h3>${friend.nickname || 'Unknown User'}</h3>
+            <p>ID: ${friend.user_id}</p>
+          </div>
+        </div>
+        <div class="friend-actions">
+          <button class="btn btn-primary" onclick="startChat('${friend.user_id}')">Chat</button>
+        </div>
+      `;
+      
+      friendsList.appendChild(item);
+    }
+    
+    window.startChat = (userId) => {
+      alert(`Chat functionality with user ${userId} not implemented yet`);
+    };
+    
+    // 初始化
+    loadFriends();
+  </script>
+</body>
+</html>

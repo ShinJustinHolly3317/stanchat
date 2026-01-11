@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friend Invitations - StanChat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .nav-links a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .nav-links a:hover {
+      background: #f5f5f5;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .invitation-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+    }
+    
+    .invitation-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .invitation-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .invitation-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    
+    .invitation-details h3 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .invitation-details p {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .invitation-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #218838;
+    }
+    
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+    
+    .empty-state::before {
+      content: "📭";
+      font-size: 48px;
+      display: block;
+      margin-bottom: 10px;
+    }
+    
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .error.show {
+      display: block;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Friend Invitations</h1>
+      <div class="nav-links">
+        <a href="welcome.html">Home</a>
+        <a href="friends-search.html">Search</a>
+        <a href="friends-list.html">Friends</a>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Pending Invitations</h2>
+      <div class="error" id="error"></div>
+      <div class="loading" id="loading">Loading invitations...</div>
+      <div id="invitationsList"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import FriendsAPI from './friends-api.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { SUPABASE_CONFIG } from './config.js';
+    
+    const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    const invitationsList = document.getElementById('invitationsList');
+    const loading = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    
+    let invitations = [];
+    let realtimeChannels = null;
+    
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+    }
+    
+    function hideError() {
+      errorDiv.classList.remove('show');
+    }
+    
+    async function loadInvitations() {
+      try {
+        loading.style.display = 'block';
+        invitationsList.innerHTML = '';
+        hideError();
+        
+        // 取得當前使用者
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!session) {
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        // 從 API 取得待處理的邀請
+        const result = await FriendsAPI.getInvitations();
+        invitations = result.invitations || [];
+        
+        if (invitations.length === 0) {
+          invitationsList.innerHTML = `
+            <div class="empty-state">
+              <p>No pending invitations</p>
+            </div>
+          `;
+        } else {
+          invitations.forEach((invitation) => {
+            renderInvitation(invitation);
+          });
+        }
+        
+        loading.style.display = 'none';
+      } catch (error) {
+        showError(error.message);
+        invitationsList.innerHTML = `
+          <div class="empty-state">
+            <p>Error loading invitations</p>
+          </div>
+        `;
+        loading.style.display = 'none';
+      }
+    }
+    
+    function renderInvitation(invitation) {
+      const item = document.createElement('div');
+      item.className = 'invitation-item';
+      item.id = `invitation-${invitation.user_id}`;
+      
+      const firstLetter = (invitation.nickname || 'U')[0].toUpperCase();
+      
+      // 格式化時間
+      const createdAt = invitation.created_at
+        ? new Date(invitation.created_at * 1000).toLocaleDateString()
+        : '';
+      
+      item.innerHTML = `
+        <div class="invitation-info">
+          <div class="invitation-avatar" style="background-image: ${invitation.image_url ? `url('${invitation.image_url}')` : 'none'}; background-size: cover;">
+            ${invitation.image_url ? '' : firstLetter}
+          </div>
+          <div class="invitation-details">
+            <h3>${invitation.nickname || 'Unknown User'}</h3>
+            <p>${createdAt ? `Sent on ${createdAt}` : 'Pending invitation'}</p>
+          </div>
+        </div>
+        <div class="invitation-actions">
+          <button class="btn btn-success" onclick="handleAccept('${invitation.user_id}')">Accept</button>
+          <button class="btn btn-secondary" onclick="handleDecline('${invitation.user_id}')">Decline</button>
+        </div>
+      `;
+      
+      invitationsList.appendChild(item);
+    }
+    
+    window.handleAccept = async (userId) => {
+      try {
+        const result = await FriendsAPI.acceptInvitation(userId, 'accept');
+        if (result.room_id) {
+          alert(`Friend request accepted! Room ID: ${result.room_id}`);
+        } else {
+          alert('Friend request accepted!');
+        }
+        loadInvitations();
+      } catch (error) {
+        showError(error.message);
+      }
+    };
+    
+    window.handleDecline = async (userId) => {
+      try {
+        await FriendsAPI.acceptInvitation(userId, 'decline');
+        alert('Friend request declined');
+        loadInvitations();
+      } catch (error) {
+        showError(error.message);
+      }
+    };
+    
+    // 設定 Realtime 監聽
+    async function setupRealtime() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
+      if (!session) return;
+      
+      const userId = session.user.id;
+      
+      realtimeChannels = FriendsAPI.setupRealtimeListeners(userId, {
+        onInvitationReceived: (payload) => {
+          console.log('New invitation received:', payload);
+          // 重新載入邀請列表
+          loadInvitations();
+        },
+        onInvitationAccepted: (payload) => {
+          console.log('Invitation accepted:', payload);
+          loadInvitations();
+        },
+        onInvitationDeclined: (payload) => {
+          console.log('Invitation declined:', payload);
+          loadInvitations();
+        },
+      });
+    }
+    
+    // 初始化
+    loadInvitations();
+    setupRealtime();
+  </script>
+</body>
+</html>
