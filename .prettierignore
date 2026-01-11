@@ -1,0 +1,7 @@
+node_modules/
+.supabase/
+dist/
+build/
+*.min.js
+package-lock.json
+yarn.lock

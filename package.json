@@ -1,0 +1,26 @@
+{
+  "name": "stanchat",
+  "version": "1.0.0",
+  "description": "StanChat - Supabase backend with frontend",
+  "scripts": {
+    "lint": "npm run lint:js && npm run lint:ts && npm run lint:html && npm run lint:yaml",
+    "lint:js": "eslint frontend/**/*.js",
+    "lint:ts": "eslint supabase/functions/**/*.ts",
+    "lint:html": "htmlhint frontend/**/*.html",
+    "lint:yaml": "yamllint .github/workflows/*.yml",
+    "lint:fix": "eslint --fix frontend/**/*.js supabase/functions/**/*.ts",
+    "format": "prettier --write \"**/*.{js,ts,json,md,html,yaml,yml}\"",
+    "config": "node scripts/generate-config.js"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.50.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "htmlhint": "^1.1.4",
+    "prettier": "^3.0.0",
+    "typescript": "^5.2.0",
+    "yaml-lint": "^1.2.0"
+  }
+}

@@ -6,6 +6,10 @@
 .env.local
 .env.*.local
 
+# Frontend config (contains sensitive keys)
+frontend/config.js
+frontend/.env
+
 # Dependencies
 node_modules/
 
@@ -30,3 +34,7 @@ yarn-error.log*
 dist/
 build/
 *.tsbuildinfo
+
+# Dependencies
+package-lock.json
+yarn.lock

@@ -59,3 +59,19 @@ status: ## 顯示 Supabase 服務狀態
 
 logs: ## 顯示 Supabase 日誌
 	supabase logs
+
+lint: ## 執行所有 linting 檢查
+	@echo "Running linters..."
+	@npm run lint || (echo "Install dependencies first: npm install" && exit 1)
+
+lint-fix: ## 自動修復 linting 問題
+	@echo "Fixing linting issues..."
+	@npm run lint:fix || (echo "Install dependencies first: npm install" && exit 1)
+
+format: ## 格式化所有檔案
+	@echo "Formatting files..."
+	@npm run format || (echo "Install dependencies first: npm install" && exit 1)
+
+config: ## 從 .env 生成 config.js (使用: make config)
+	@echo "Generating config.js from .env..."
+	@npm run config || (echo "Install dependencies first: npm install" && exit 1)
