@@ -1,6 +1,9 @@
 # Supabase
 .supabase/
 
+# docs
+docs/
+
 # Environment variables
 .env
 .env.local
