@@ -6,10 +6,10 @@
 # project_id = "your-project-id"
 
 [auth]
-# Auth 設定
+# Auth 設定 (僅後端部署時可忽略，這些設定用於前端認證流程)
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://localhost:3000"]
+site_url = "http://localhost:3000"  # 後端部署時不需要，可設為任意值
+additional_redirect_urls = []  # 後端部署時不需要
 jwt_expiry = 3600
 enable_signup = true
 
@@ -41,8 +41,7 @@ max_client_conn = 100
 
 [realtime]
 enabled = true
-port = 40000
-ip_version = "ipv4"
+ip_version = "IPv4"
 
 [studio]
 enabled = true
