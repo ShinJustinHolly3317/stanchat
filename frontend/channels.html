@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Channels - StanChat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .nav-links a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .nav-links a:hover {
+      background: #f5f5f5;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .channels-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    .channel-item {
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 20px;
+      background: #f9f9f9;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    
+    .channel-item:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      border-color: #667eea;
+    }
+    
+    .channel-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    
+    .channel-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .channel-info h3 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .channel-info p {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .channel-type-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 5px;
+    }
+    
+    .type-direct {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    .type-group {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .channel-users {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .channel-users-title {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    
+    .users-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: white;
+      border-radius: 16px;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .user-chip-avatar {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 10px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 40px;
+      color: #999;
+    }
+    
+    .empty-state::before {
+      content: "💬";
+      font-size: 64px;
+      display: block;
+      margin-bottom: 20px;
+    }
+    
+    .empty-state h3 {
+      color: #666;
+      margin-bottom: 10px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .error.show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>My Channels</h1>
+      <div class="nav-links">
+        <a href="welcome.html">Home</a>
+        <a href="friends-search.html">Friends</a>
+        <a href="friends-invitations.html">Invitations</a>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Chat Channels</h2>
+      <div class="error" id="error"></div>
+      <div class="loading" id="loading">Loading channels...</div>
+      <div class="channels-grid" id="channelsGrid"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import FriendsAPI from './friends-api.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { SUPABASE_CONFIG } from './config.js';
+    
+    const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    const channelsGrid = document.getElementById('channelsGrid');
+    const loading = document.getElementById('loading');
+    const errorDiv = document.getElementById('error');
+    
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+    }
+    
+    function hideError() {
+      errorDiv.classList.remove('show');
+    }
+    
+    function getChannelIcon(channelType) {
+      return channelType === 'direct' ? '💬' : '👥';
+    }
+    
+    function getChannelTypeText(channelType) {
+      return channelType === 'direct' ? 'Direct Message' : 'Group Chat';
+    }
+    
+    function renderChannel(channel) {
+      const channelItem = document.createElement('div');
+      channelItem.className = 'channel-item';
+      channelItem.onclick = () => {
+        // TODO: Navigate to chat page
+        alert(`Opening channel ${channel.id} (not implemented yet)`);
+      };
+      
+      const usersList = channel.users
+        .map((user) => {
+          const firstLetter = (user.nickname || 'U')[0].toUpperCase();
+          return `
+            <div class="user-chip">
+              <div class="user-chip-avatar" style="background-image: ${user.image_url ? `url('${user.image_url}')` : 'none'}; background-size: cover;">
+                ${user.image_url ? '' : firstLetter}
+              </div>
+              <span>${user.nickname}</span>
+            </div>
+          `;
+        })
+        .join('');
+      
+      channelItem.innerHTML = `
+        <div class="channel-header">
+          <div class="channel-icon">${getChannelIcon(channel.channel_type)}</div>
+          <div class="channel-info">
+            <h3>Channel #${channel.id}</h3>
+            <span class="channel-type-badge type-${channel.channel_type}">${getChannelTypeText(channel.channel_type)}</span>
+          </div>
+        </div>
+        ${channel.users.length > 0 ? `
+          <div class="channel-users">
+            <div class="channel-users-title">Members (${channel.users.length})</div>
+            <div class="users-list">${usersList}</div>
+          </div>
+        ` : ''}
+      `;
+      
+      channelsGrid.appendChild(channelItem);
+    }
+    
+    async function loadChannels() {
+      try {
+        loading.style.display = 'block';
+        channelsGrid.innerHTML = '';
+        hideError();
+        
+        // 檢查登入狀態
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!session) {
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        // 從 API 取得頻道列表
+        const result = await FriendsAPI.getChannels();
+        const channels = result.channels || [];
+        
+        if (channels.length === 0) {
+          channelsGrid.innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <h3>No channels yet</h3>
+              <p>Start chatting with friends to create channels</p>
+            </div>
+          `;
+        } else {
+          channels.forEach((channel) => {
+            renderChannel(channel);
+          });
+        }
+        
+        loading.style.display = 'none';
+      } catch (error) {
+        showError(error.message);
+        channelsGrid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <h3>Error loading channels</h3>
+            <p>${error.message}</p>
+          </div>
+        `;
+        loading.style.display = 'none';
+      }
+    }
+    
+    // 初始化
+    loadChannels();
+  </script>
+</body>
+</html>

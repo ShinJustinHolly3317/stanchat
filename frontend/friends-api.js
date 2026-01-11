@@ -120,6 +120,28 @@ class FriendsAPI {
   }
 
   /**
+   * 取得使用者所有的聊天頻道
+   */
+  async getChannels() {
+    const token = await this.getAuthToken();
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/get-channels`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch channels');
+    }
+
+    return await response.json();
+  }
+
+  /**
    * 設定 Realtime 監聽
    */
   setupRealtimeListeners(userId, callbacks) {
