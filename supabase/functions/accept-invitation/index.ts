@@ -180,11 +180,8 @@ serve(async (req) => {
         );
       }
 
-      // 執行更新 - 使用 service role key 來 bypass RLS
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-
-      const { data: updatedFriendship, error: updateError } = await serviceClient
+      // 執行更新 - 使用 anon key (RLS 政策已更新)
+      const { data: updatedFriendship, error: updateError } = await supabase
         .from('friendships')
         .update({
           status: 'friend',
@@ -223,7 +220,9 @@ serve(async (req) => {
 
       // 建立聊天室 (如果需要)
       // 這裡假設 chat_channels 表存在，且 channel_type 有 'direct' 選項
-      // serviceClient 已經在上面建立了
+      // 使用 service role key 來建立 channel (可能需要 bypass RLS)
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
       // 建立 direct message channel
       const { data: channel, error: channelError } = await serviceClient
@@ -256,11 +255,8 @@ serve(async (req) => {
       }
     } else {
       // 拒絕邀請：刪除記錄或更新狀態
-      // 使用 service role key 來 bypass RLS
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-
-      const { error: deleteError } = await serviceClient
+      // 使用 anon key (RLS 政策已更新)
+      const { error: deleteError } = await supabase
         .from('friendships')
         .delete()
         .eq('user_one_id', friendship.user_one_id)
@@ -274,7 +270,10 @@ serve(async (req) => {
       }
 
       // 發送通知給發送邀請的使用者
-      // serviceClient 已經在上面建立了
+      // 使用 service role key 來發送 Realtime 通知
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
       await serviceClient.channel(`user:${targetUserId}`).send({
         type: 'broadcast',
         event: 'friend_request_declined',
