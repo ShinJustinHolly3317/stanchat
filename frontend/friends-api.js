@@ -97,6 +97,28 @@ class FriendsAPI {
   }
 
   /**
+   * 取得所有好友列表
+   */
+  async getFriends() {
+    const token = await this.getAuthToken();
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/get-friends`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch friends');
+    }
+
+    return await response.json();
+  }
+
+  /**
    * 取得待處理的邀請列表
    */
   async getInvitations() {

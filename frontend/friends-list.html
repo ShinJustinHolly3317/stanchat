@@ -185,6 +185,7 @@
   </div>
 
   <script type="module">
+    import FriendsAPI from './friends-api.js';
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
     import { SUPABASE_CONFIG } from './config.js';
     
@@ -207,22 +208,24 @@
           return;
         }
         
-        const currentUserId = session.user.id;
+        // 從 API 取得好友列表
+        const result = await FriendsAPI.getFriends();
+        const friends = result.friends || [];
         
-        // 從資料庫查詢好友列表
-        // 注意：這裡需要實際的資料庫查詢
-        // 實際應該查詢 friendships 表，status = 'friend' 且 (user_one_id = currentUserId OR user_two_id = currentUserId)
-        
-        // 模擬：顯示提示訊息
-        friendsList.innerHTML = `
-          <div class="empty-state">
-            <p>No friends yet</p>
-            <p style="margin-top: 10px; font-size: 12px; color: #999;">
-              Note: This page requires database queries to show actual friends list.
-              Use the Search page to find and add friends.
-            </p>
-          </div>
-        `;
+        if (friends.length === 0) {
+          friendsList.innerHTML = `
+            <div class="empty-state">
+              <p>No friends yet</p>
+              <p style="margin-top: 10px; font-size: 12px; color: #999;">
+                Use the Search page to find and add friends.
+              </p>
+            </div>
+          `;
+        } else {
+          friends.forEach((friend) => {
+            renderFriend(friend);
+          });
+        }
         
         loading.style.display = 'none';
       } catch (error) {
@@ -230,6 +233,7 @@
         friendsList.innerHTML = `
           <div class="empty-state">
             <p>Error loading friends</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #c33;">${error.message}</p>
           </div>
         `;
         loading.style.display = 'none';
@@ -242,12 +246,19 @@
       
       const firstLetter = (friend.nickname || 'U')[0].toUpperCase();
       
+      // 格式化成為好友的時間
+      const friendSince = friend.friendship_created_at
+        ? new Date(friend.friendship_created_at).toLocaleDateString()
+        : '';
+      
       item.innerHTML = `
         <div class="friend-info">
-          <div class="friend-avatar">${firstLetter}</div>
+          <div class="friend-avatar" style="background-image: ${friend.image_url ? `url('${friend.image_url}')` : 'none'}; background-size: cover;">
+            ${friend.image_url ? '' : firstLetter}
+          </div>
           <div class="friend-details">
             <h3>${friend.nickname || 'Unknown User'}</h3>
-            <p>ID: ${friend.user_id}</p>
+            <p>${friendSince ? `Friends since ${friendSince}` : 'Friend'}</p>
           </div>
         </div>
         <div class="friend-actions">
