@@ -269,8 +269,7 @@
       const channelItem = document.createElement('div');
       channelItem.className = 'channel-item';
       channelItem.onclick = () => {
-        // TODO: Navigate to chat page
-        alert(`Opening channel ${channel.id} (not implemented yet)`);
+        window.location.href = `chat.html?room_id=${channel.id}`;
       };
       
       const usersList = channel.users

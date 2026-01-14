@@ -164,6 +164,32 @@ class FriendsAPI {
   }
 
   /**
+   * 建立 pending message 並取得問題
+   */
+  async createPendingMessage(roomId, content) {
+    const token = await this.getAuthToken();
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/create-pending-message`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        room_id: roomId,
+        content: content,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create pending message');
+    }
+
+    return await response.json();
+  }
+
+  /**
    * 設定 Realtime 監聽
    */
   setupRealtimeListeners(userId, callbacks) {
