@@ -65,10 +65,7 @@ serve(async (req) => {
       .in('uid', senderIds);
 
     if (profileError) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch user profiles' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'Failed to fetch user profiles', 500);
     }
 
     // 建立 user_id 到 profile 的映射

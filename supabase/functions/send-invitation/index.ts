@@ -4,6 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 serve(async (req) => {
   // 處理 CORS preflight request
@@ -15,10 +16,7 @@ serve(async (req) => {
     // 取得認證資訊
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1001', 'Missing authorization header', 401);
     }
 
     // 建立 Supabase client
@@ -35,10 +33,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1002', 'Unauthorized', 401);
     }
 
     const currentUserId = user.id;
@@ -47,18 +42,12 @@ serve(async (req) => {
     const { target_user_id } = await req.json();
 
     if (!target_user_id) {
-      return new Response(JSON.stringify({ error: 'target_user_id is required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'target_user_id is required', 400);
     }
 
     // 不能邀請自己
     if (target_user_id === currentUserId) {
-      return new Response(JSON.stringify({ error: 'Cannot send invitation to yourself' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'Cannot send invitation to yourself', 400);
     }
 
     // 檢查目標使用者是否存在
@@ -69,10 +58,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !targetProfile) {
-      return new Response(JSON.stringify({ error: 'Target user not found' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      });
+      return jsonErr('1404', 'Target user not found', 404);
     }
 
     // 檢查是否已有關係
@@ -89,41 +75,26 @@ serve(async (req) => {
       .maybeSingle();
 
     if (friendshipError) {
-      return new Response(JSON.stringify({ error: 'Failed to check existing friendship' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'Failed to check existing friendship', 500);
     }
 
     // 如果已經有關係，檢查狀態
     if (existingFriendship) {
       if (existingFriendship.status === 'friend') {
-        return new Response(JSON.stringify({ error: 'Already friends' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
+        return jsonErr('1200', 'Already friends', 400);
       }
 
       if (existingFriendship.status === 'pending') {
         // 檢查是誰發送的邀請
         if (existingFriendship.user_one_id === currentUserId) {
-          return new Response(JSON.stringify({ error: 'Invitation already sent' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          });
+          return jsonErr('1200', 'Invitation already sent', 400);
         } else {
-          return new Response(JSON.stringify({ error: 'You have a pending invitation from this user' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400,
-          });
+          return jsonErr('1200', 'You have a pending invitation from this user', 400);
         }
       }
 
       if (existingFriendship.status === 'blocked') {
-        return new Response(JSON.stringify({ error: 'Cannot send invitation to blocked user' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        });
+        return jsonErr('1200', 'Cannot send invitation to blocked user', 400);
       }
     }
 
@@ -155,10 +126,7 @@ serve(async (req) => {
     }
 
     if (result.error) {
-      return new Response(JSON.stringify({ error: 'Failed to send invitation' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'Failed to send invitation', 500);
     }
 
     // 發送 Realtime 通知給目標使用者
@@ -174,19 +142,8 @@ serve(async (req) => {
       },
     });
 
-    return new Response(
-      JSON.stringify({
-        status: 'success',
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+    return jsonOk({ status: 'success' });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });

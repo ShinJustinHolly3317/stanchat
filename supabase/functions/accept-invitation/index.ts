@@ -4,6 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 serve(async (req) => {
   // 處理 CORS preflight request
@@ -15,10 +16,7 @@ serve(async (req) => {
     // 取得認證資訊
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1001', 'Missing authorization header', 401);
     }
 
     // 建立 Supabase client
@@ -35,10 +33,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1002', 'Unauthorized', 401);
     }
 
     const currentUserId = user.id;
@@ -47,17 +42,11 @@ serve(async (req) => {
     const { request_id, action } = await req.json();
 
     if (!request_id) {
-      return new Response(JSON.stringify({ error: 'request_id is required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'request_id is required', 400);
     }
 
     if (!action || (action !== 'accept' && action !== 'decline')) {
-      return new Response(JSON.stringify({ error: 'action must be "accept" or "decline"' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'action must be "accept" or "decline"', 400);
     }
 
     // 查詢邀請記錄
@@ -76,10 +65,7 @@ serve(async (req) => {
       .single();
 
     if (profileError || !targetProfile) {
-      return new Response(JSON.stringify({ error: 'Target user not found' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      });
+      return jsonErr('1404', 'Target user not found', 404);
     }
 
     // 查詢 friendship 記錄
@@ -95,25 +81,16 @@ serve(async (req) => {
       .maybeSingle();
 
     if (friendshipError) {
-      return new Response(JSON.stringify({ error: 'Failed to check friendship' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'Failed to check friendship', 500);
     }
 
     if (!friendship) {
-      return new Response(JSON.stringify({ error: 'Invitation not found' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      });
+      return jsonErr('1404', 'Invitation not found', 404);
     }
 
     // 驗證這是待處理的邀請，且當前使用者是接收方
     if (friendship.status !== 'pending') {
-      return new Response(JSON.stringify({ error: 'Invitation is not pending' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1200', 'Invitation is not pending', 400);
     }
 
     // 確認當前使用者是接收方
@@ -124,13 +101,7 @@ serve(async (req) => {
       (friendship.user_one_id === targetUserId && friendship.user_two_id === currentUserId);
 
     if (!isCurrentUserReceiver) {
-      return new Response(
-        JSON.stringify({ error: 'You are not the recipient of this invitation' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403,
-        }
-      );
+      return jsonErr('1004', 'You are not the recipient of this invitation', 403);
     }
 
     const now = new Date().toISOString(); // ISO 8601 timestamp
@@ -160,24 +131,12 @@ serve(async (req) => {
 
       if (verifyError) {
         console.error('Verify error:', verifyError);
-        return new Response(
-          JSON.stringify({ error: `Failed to verify invitation: ${verifyError.message}` }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-          }
-        );
+        return jsonErr('9000', `Failed to verify invitation: ${verifyError.message}`, 500);
       }
 
       if (!verifyFriendship) {
         console.log('Friendship not found or status changed');
-        return new Response(
-          JSON.stringify({ error: 'Invitation not found or already processed' }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 404,
-          }
-        );
+        return jsonErr('1404', 'Invitation not found or already processed', 404);
       }
 
       // 執行更新 - 使用 anon key (RLS 政策已更新)
@@ -195,25 +154,13 @@ serve(async (req) => {
 
       if (updateError) {
         console.error('Update error:', updateError);
-        return new Response(
-          JSON.stringify({ error: `Failed to accept invitation: ${updateError.message}` }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-          }
-        );
+        return jsonErr('9000', `Failed to accept invitation: ${updateError.message}`, 500);
       }
 
       // 確認更新是否成功（有資料被更新）
       if (!updatedFriendship) {
         console.log('No rows updated - status might have changed');
-        return new Response(
-          JSON.stringify({ error: 'Invitation not found or already processed' }),
-          {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 404,
-          }
-        );
+        return jsonErr('1404', 'Invitation not found or already processed', 404);
       }
 
       console.log('Friendship updated successfully:', updatedFriendship);
@@ -263,10 +210,7 @@ serve(async (req) => {
         .eq('user_two_id', friendship.user_two_id);
 
       if (deleteError) {
-        return new Response(JSON.stringify({ error: 'Failed to decline invitation' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        });
+        return jsonErr('9000', 'Failed to decline invitation', 500);
       }
 
       // 發送通知給發送邀請的使用者
@@ -284,20 +228,15 @@ serve(async (req) => {
       });
     }
 
-    return new Response(
-      JSON.stringify({
-        status: 'success',
-        ...(roomId && { room_id: roomId }),
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+    return jsonOk(
+      roomId
+        ? {
+            status: 'success',
+            room_id: roomId,
+          }
+        : { status: 'success' }
     );
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });

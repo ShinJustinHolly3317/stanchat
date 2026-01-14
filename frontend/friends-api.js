@@ -8,6 +8,42 @@ const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
 class FriendsAPI {
   /**
+   * 解析 Edge Function 的標準回應格式
+   * - success: { code: '0000', data: ... }
+   * - error:   { code: 'xxxx', message: '...' }
+   */
+  async parseEnvelope(response) {
+    let body = null;
+    try {
+      body = await response.json();
+    } catch {
+      // ignore
+    }
+
+    if (!body) {
+      if (response.ok) {
+        return null;
+      }
+      throw new Error(`Request failed (${response.status})`);
+    }
+
+    if (body.code) {
+      if (body.code === '0000') {
+        return body.data;
+      }
+      const err = new Error(body.message || 'Request failed');
+      err.code = body.code;
+      throw err;
+    }
+
+    // fallback (old format)
+    if (!response.ok) {
+      throw new Error(body.error || body.message || 'Request failed');
+    }
+    return body;
+  }
+
+  /**
    * 取得認證 token
    */
   async getAuthToken() {
@@ -35,12 +71,7 @@ class FriendsAPI {
       body: JSON.stringify({ query }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Search failed');
-    }
-
-    return await response.json();
+    return await this.parseEnvelope(response);
   }
 
   /**
@@ -58,12 +89,7 @@ class FriendsAPI {
       body: JSON.stringify({ target_user_id: targetUserId }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to send invitation');
-    }
-
-    return await response.json();
+    return await this.parseEnvelope(response);
   }
 
   /**
@@ -88,12 +114,7 @@ class FriendsAPI {
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to process invitation');
-    }
-
-    return await response.json();
+    return await this.parseEnvelope(response);
   }
 
   /**
@@ -110,12 +131,7 @@ class FriendsAPI {
       },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch friends');
-    }
-
-    return await response.json();
+    return await this.parseEnvelope(response);
   }
 
   /**
@@ -132,13 +148,7 @@ class FriendsAPI {
       },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch invitations');
-    }
-
-    const result = await response.json();
-    return result;
+    return await this.parseEnvelope(response);
   }
 
   /**
@@ -155,12 +165,7 @@ class FriendsAPI {
       },
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to fetch channels');
-    }
-
-    return await response.json();
+    return await this.parseEnvelope(response);
   }
 
   /**
@@ -181,13 +186,15 @@ class FriendsAPI {
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to create pending message');
-    }
-
-    return await response.json();
+    return await this.parseEnvelope(response);
   }
+
+  /** @deprecated duplicated; kept for backward compatibility during refactor */
+  async createPendingMessage_duplicated(roomId, content) {
+    return await this.createPendingMessage(roomId, content);
+  }
+
+  // (removed duplicate createPendingMessage implementation; use the envelope version above)
 
   /**
    * 設定 Realtime 監聽

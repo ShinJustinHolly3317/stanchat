@@ -4,6 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 serve(async (req) => {
   // 處理 CORS preflight request
@@ -15,10 +16,7 @@ serve(async (req) => {
     // 取得認證資訊
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1001', 'Missing authorization header', 401);
     }
 
     // 建立 Supabase client
@@ -35,10 +33,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1002', 'Unauthorized', 401);
     }
 
     const currentUserId = user.id;
@@ -47,16 +42,15 @@ serve(async (req) => {
     const { query } = await req.json();
 
     if (!query) {
-      return new Response(JSON.stringify({ error: 'query is required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'query is required', 400);
     }
 
     // 搜尋使用者 (根據 uid 或 email)
     // 先嘗試從 auth.users 搜尋 email
-    let targetUser = null;
-    let targetUserId = null;
+    /** @type {{ id: string; nickname: string } | null} */
+    let targetUser: { id: string; nickname: string } | null = null;
+    /** @type {string | null} */
+    let targetUserId: string | null = null;
 
     // 檢查是否為 UUID (可能是 user_id)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,18 +91,12 @@ serve(async (req) => {
     }
 
     if (!targetUser || !targetUserId) {
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404,
-      });
+      return jsonErr('1404', 'User not found', 404);
     }
 
     // 不能搜尋自己
     if (targetUserId === currentUserId) {
-      return new Response(JSON.stringify({ error: 'Cannot search yourself' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'Cannot search yourself', 400);
     }
 
     // 查詢關係狀態
@@ -146,20 +134,11 @@ serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        user: targetUser,
-        relationship_status: relationshipStatus,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+    return jsonOk({
+      user: targetUser,
+      relationship_status: relationshipStatus,
     });
+  } catch (error) {
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });

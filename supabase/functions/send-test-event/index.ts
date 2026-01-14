@@ -4,6 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 serve(async (req) => {
   // 處理 CORS preflight request
@@ -15,10 +16,7 @@ serve(async (req) => {
     const { userId, eventType, payload } = await req.json();
 
     if (!userId) {
-      return new Response(JSON.stringify({ error: 'userId is required' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'userId is required', 400);
     }
 
     // 建立 Supabase client (使用 service role key 來發送 broadcast)
@@ -37,22 +35,14 @@ serve(async (req) => {
       payload: payload || { message: 'Test event', timestamp: new Date().toISOString() },
     });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        channel: channelName,
-        event: eventType === 'inbox' ? 'inbox-event' : 'user-event',
-        payload,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+    return jsonOk({
+      success: true,
+      channel: channelName,
+      event: eventType === 'inbox' ? 'inbox-event' : 'user-event',
+      payload,
+      result,
     });
+  } catch (error) {
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 400);
   }
 });
