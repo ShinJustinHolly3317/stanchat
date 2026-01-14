@@ -7,6 +7,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 const DEFAULT_TTL_MINUTES = 10;
 
@@ -23,19 +24,13 @@ serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 405,
-    });
+    return jsonErr('1003', 'Method not allowed', 405);
   }
 
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1001', 'Missing authorization header', 401);
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -50,10 +45,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1002', 'Unauthorized', 401);
     }
 
     const body = await req.json();
@@ -61,17 +53,11 @@ serve(async (req) => {
     const content = body?.content;
 
     if (!roomId || typeof roomId !== 'string') {
-      return new Response(JSON.stringify({ error: 'room_id is required (string)' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'room_id is required (string)', 400);
     }
 
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
-      return new Response(JSON.stringify({ error: 'content is required (non-empty string)' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      });
+      return jsonErr('1100', 'content is required (non-empty string)', 400);
     }
 
     // 抽題：prototype 先隨機取 1 題
@@ -82,20 +68,11 @@ serve(async (req) => {
       .limit(1000);
 
     if (questionError) {
-      return new Response(
-        JSON.stringify({ error: `Failed to fetch questions: ${questionError.message}` }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
+      return jsonErr('9000', `Failed to fetch questions: ${questionError.message}`, 500);
     }
 
     if (!questions || questions.length === 0) {
-      return new Response(JSON.stringify({ error: 'No questions available' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'No questions available', 500);
     }
 
     const picked = questions[Math.floor(Math.random() * questions.length)];
@@ -119,36 +96,21 @@ serve(async (req) => {
       .single();
 
     if (pendingError) {
-      return new Response(
-        JSON.stringify({ error: `Failed to create pending message: ${pendingError.message}` }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
+      return jsonErr('9000', `Failed to create pending message: ${pendingError.message}`, 500);
     }
 
     // 回傳給前端：pending_id + question
-    return new Response(
-      JSON.stringify({
-        pending_id: pending.id,
-        question: {
-          id: picked.id,
-          category: picked.category,
-          title: picked.title,
-          content: picked.content,
-          ...(picked.options ? { options: picked.options } : {}),
-        },
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+    return jsonOk({
+      pending_id: pending.id,
+      question: {
+        id: picked.id,
+        category: picked.category,
+        title: picked.title,
+        content: picked.content,
+        ...(picked.options ? { options: picked.options } : {}),
+      },
     });
+  } catch (error) {
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });

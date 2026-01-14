@@ -4,6 +4,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 serve(async (req) => {
   // 處理 CORS preflight request
@@ -15,10 +16,7 @@ serve(async (req) => {
     // 取得認證資訊
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1001', 'Missing authorization header', 401);
     }
 
     // 建立 Supabase client
@@ -35,10 +33,7 @@ serve(async (req) => {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401,
-      });
+      return jsonErr('1002', 'Unauthorized', 401);
     }
 
     const currentUserId = user.id;
@@ -53,22 +48,11 @@ serve(async (req) => {
       .order('updated_at', { ascending: false });
 
     if (friendshipsError) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch friends' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'Failed to fetch friends', 500);
     }
 
     if (!friendships || friendships.length === 0) {
-      return new Response(
-        JSON.stringify({
-          friends: [],
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
+      return jsonOk({ friends: [] });
     }
 
     // 取得所有好友的 user_id（排除當前使用者）
@@ -85,10 +69,7 @@ serve(async (req) => {
       .in('uid', friendIds);
 
     if (profilesError) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch user profiles' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      });
+      return jsonErr('9000', 'Failed to fetch user profiles', 500);
     }
 
     // 建立 user_id 到 friendship 的映射（用於取得建立時間）
@@ -112,19 +93,8 @@ serve(async (req) => {
         };
       }) || [];
 
-    return new Response(
-      JSON.stringify({
-        friends: friends,
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
+    return jsonOk({ friends: friends });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
-    });
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });
