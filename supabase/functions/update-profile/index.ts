@@ -57,20 +57,6 @@ serve(async (req) => {
       return jsonErr('9000', `Failed to update profile: ${updateError.message}`, 500);
     }
 
-    if (!updated) {
-      // No row updated — attempt insert
-      const { error: insertError } = await supabase.from('user_profile').insert({
-        uid: user.id,
-        name: nickname.trim(),
-        created_at: now,
-        updated_at: now,
-      });
-
-      if (insertError) {
-        return jsonErr('9000', `Failed to create profile: ${insertError.message}`, 500);
-      }
-    }
-
     return jsonOk({
       status: 'success',
       updated_at: now,
@@ -79,4 +65,3 @@ serve(async (req) => {
     return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });
-

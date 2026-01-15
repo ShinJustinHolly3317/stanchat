@@ -118,6 +118,31 @@
       color: #666;
       font-size: 14px;
     }
+
+    .channel-last-message {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #eaeaea;
+      color: #666;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .last-message-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .last-message-time {
+      flex-shrink: 0;
+      color: #999;
+      font-size: 12px;
+    }
     
     .channel-type-badge {
       display: inline-block;
@@ -285,6 +310,10 @@
           `;
         })
         .join('');
+
+      const lastMessage = channel.last_message;
+      const lastText = lastMessage?.message_content ? lastMessage.message_content : 'No messages yet';
+      const lastTime = lastMessage?.created_at ? new Date(lastMessage.created_at).toLocaleString() : '';
       
       channelItem.innerHTML = `
         <div class="channel-header">
@@ -293,6 +322,10 @@
             <h3>Channel #${channel.id}</h3>
             <span class="channel-type-badge type-${channel.channel_type}">${getChannelTypeText(channel.channel_type)}</span>
           </div>
+        </div>
+        <div class="channel-last-message">
+          <div class="last-message-text">${lastText}</div>
+          <div class="last-message-time">${lastTime}</div>
         </div>
         ${channel.users.length > 0 ? `
           <div class="channel-users">

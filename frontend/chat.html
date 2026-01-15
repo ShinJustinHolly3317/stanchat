@@ -372,8 +372,11 @@
     
     let currentUserId = null;
     let currentQuestion = null;
-  let currentPendingId = null;
+    let currentPendingId = null;
     let currentAudioPath = null;
+
+    let roomChannel = null;
+    const seenMessageIds = new Set();
 
     function safeFileExt(filename) {
       const idx = filename.lastIndexOf('.');
@@ -465,10 +468,18 @@
     }
     
     // 新增訊息到畫面
-    function addMessage(content, isSent = true, isPending = false) {
+    function addMessage(content, isSent = true, isPending = false, messageId = null) {
       const emptyState = messagesArea.querySelector('.empty-state');
       if (emptyState) {
         emptyState.remove();
+      }
+
+      if (messageId != null) {
+        const key = String(messageId);
+        if (seenMessageIds.has(key)) {
+          return;
+        }
+        seenMessageIds.add(key);
       }
       
       const messageDiv = document.createElement('div');
@@ -476,7 +487,7 @@
       
       const avatar = document.createElement('div');
       avatar.className = 'message-avatar';
-      avatar.textContent = isSent ? 'You'[0] : 'U';
+      avatar.textContent = isSent ? 'Y' : 'F';
       
       const contentDiv = document.createElement('div');
       contentDiv.className = 'message-content';
@@ -502,6 +513,41 @@
       messageDiv.appendChild(contentDiv);
       messagesArea.appendChild(messageDiv);
       messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    function setupRoomRealtime(channelId) {
+      // Clean up previous subscription (if any)
+      if (roomChannel) {
+        supabase.removeChannel(roomChannel);
+        roomChannel = null;
+      }
+
+      roomChannel = supabase
+        .channel(`room:${channelId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `channel_id=eq.${channelId}`,
+          },
+          (payload) => {
+            const row = payload.new || payload.record || {};
+            const msgId = row.id ?? null;
+            const msgUid = row.uid ?? null;
+            const content = row.message_content ?? row.content ?? '';
+
+            // Ignore empty messages
+            if (!content) return;
+
+            const isSent = msgUid && currentUserId ? String(msgUid) === String(currentUserId) : false;
+            addMessage(content, isSent, false, msgId);
+          }
+        )
+        .subscribe((status) => {
+          console.log('room realtime status:', status);
+        });
     }
     
     // 顯示問題
@@ -663,7 +709,7 @@
 
       // Render committed message into the chat stream (best-effort)
       if (committedRecord && committedRecord.content) {
-        addMessage(committedRecord.content, true, false);
+        addMessage(committedRecord.content, true, false, committedRecord.id ?? null);
       }
 
       currentQuestion = null;
@@ -738,8 +784,16 @@
       const authenticated = await checkAuth();
       if (authenticated) {
         await loadChannelInfo();
+        setupRoomRealtime(roomId);
       }
     })();
+
+    // Cleanup when leaving page
+    window.addEventListener('beforeunload', async () => {
+      if (roomChannel) {
+        await supabase.removeChannel(roomChannel);
+      }
+    });
   </script>
 </body>
 </html>
