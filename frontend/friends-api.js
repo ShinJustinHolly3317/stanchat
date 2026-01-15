@@ -57,6 +57,26 @@ class FriendsAPI {
   }
 
   /**
+   * 取得使用者 profile
+   * - 預設取自己（token uid）
+   * - 可選: 傳入 uid 取他人 profile
+   */
+  async getProfile(uid) {
+    const token = await this.getAuthToken();
+    const qs = uid ? `?uid=${encodeURIComponent(uid)}` : '';
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/get-profile${qs}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return await this.parseEnvelope(response);
+  }
+
+  /**
    * 搜尋使用者
    */
   async searchFriend(query) {
@@ -184,6 +204,31 @@ class FriendsAPI {
         room_id: roomId,
         content: content,
       }),
+    });
+
+    return await this.parseEnvelope(response);
+  }
+
+  /**
+   * 提交 pending message（寫入正式 chat_messages）
+   * - for now: always success on backend (no evaluation)
+   */
+  async commitMessage(pendingId, category, audioPath) {
+    const token = await this.getAuthToken();
+
+    const body = {
+      pending_id: pendingId,
+      category: category,
+      ...(audioPath ? { audio_path: audioPath } : {}),
+    };
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/commit-message`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
     });
 
     return await this.parseEnvelope(response);

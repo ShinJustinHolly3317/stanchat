@@ -373,6 +373,7 @@
     let currentUserId = null;
     let currentQuestion = null;
   let currentPendingId = null;
+    let currentAudioPath = null;
 
     function safeFileExt(filename) {
       const idx = filename.lastIndexOf('.');
@@ -412,6 +413,13 @@
         path: data?.path || path,
         publicUrl: publicUrlData?.publicUrl || null,
       };
+    }
+
+    async function commitPendingMessage({ pendingId, category, audioPath }) {
+      if (!pendingId) throw new Error('Missing pendingId');
+      if (!category) throw new Error('Missing category');
+      const res = await FriendsAPI.commitMessage(pendingId, category, audioPath);
+      return res;
     }
     
     function showError(message) {
@@ -500,6 +508,7 @@
     function showQuestion(question, pendingId) {
       currentQuestion = question;
       currentPendingId = pendingId || null;
+      currentAudioPath = null;
       
       const questionDiv = document.createElement('div');
       questionDiv.className = 'question-container';
@@ -587,6 +596,17 @@
 
             const file = fileInput.files?.[0];
             const res = await uploadVoiceToBucket({ pendingId: currentPendingId, file });
+            currentAudioPath = res.path;
+
+            // Auto commit after upload for speak
+            const commitRes = await commitPendingMessage({
+              pendingId: currentPendingId,
+              category: 'speak',
+              audioPath: currentAudioPath,
+            });
+
+            // Mark UI as submitted + render committed record
+            handleQuestionAnswer(`voice uploaded: ${currentAudioPath}`, commitRes?.message_record);
 
             statusDiv.innerHTML = `
               ✓ Uploaded<br/>
@@ -612,9 +632,24 @@
     }
     
     // 處理問題回答（目前只是移除問題，實際邏輯待實作）
-    function handleQuestionAnswer(answer) {
+    async function handleQuestionAnswer(answer, committedRecord) {
       console.log('Answer submitted:', answer);
-      // TODO: 實作提交答案的邏輯
+      // For now:
+      // - non-speak: commit immediately after answer interaction (no user_answer sent per requirement)
+      // - speak: commit is triggered after upload (above) and passed in via committedRecord
+      let commitResult = null;
+      try {
+        if (!committedRecord && currentQuestion && currentQuestion.category !== 'speak') {
+          commitResult = await commitPendingMessage({
+            pendingId: currentPendingId,
+            category: currentQuestion.category,
+          });
+          committedRecord = commitResult?.message_record;
+        }
+      } catch (e) {
+        showError(e.message || e);
+      }
+
       const questionContainer = messagesArea.querySelector('.question-container');
       if (questionContainer) {
         questionContainer.style.opacity = '0.5';
@@ -625,7 +660,14 @@
         submittedDiv.textContent = `✓ Answer submitted: ${answer}`;
         questionContainer.appendChild(submittedDiv);
       }
+
+      // Render committed message into the chat stream (best-effort)
+      if (committedRecord && committedRecord.content) {
+        addMessage(committedRecord.content, true, false);
+      }
+
       currentQuestion = null;
+      currentPendingId = null;
     }
     
     // 發送訊息

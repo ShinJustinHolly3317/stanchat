@@ -34,6 +34,13 @@ async function checkAuth() {
   userEmailH2.textContent = user.email || 'User';
   avatarDiv.textContent = (user.email || 'U')[0].toUpperCase();
 
+  // 點擊 avatar 打開自己的 profile（get-profile）
+  avatarDiv.style.cursor = 'pointer';
+  avatarDiv.title = 'Open profile';
+  avatarDiv.addEventListener('click', () => {
+    window.location.href = `profile.html`;
+  });
+
   // 設定 Realtime 監聽
   setupRealtime(user.id);
 }
