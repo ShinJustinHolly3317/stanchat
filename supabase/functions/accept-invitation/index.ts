@@ -70,8 +70,8 @@ serve(async (req) => {
 
     // 查詢 friendship 記錄
     // 由於記錄是排序的（較小的 ID 在 user_one_id），需要檢查兩個方向
-    const userId1 = targetUserId < currentUserId ? targetUserId : currentUserId;
-    const userId2 = targetUserId < currentUserId ? currentUserId : targetUserId;
+    const userId1 = request_id;
+    const userId2 = currentUserId;
 
     const { data: friendship, error: friendshipError } = await supabase
       .from('friendships')
