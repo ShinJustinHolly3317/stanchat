@@ -68,6 +68,25 @@
     .kv { margin-top: 18px; display: grid; grid-template-columns: 160px 1fr; gap: 10px 14px; }
     .k { color: #999; font-size: 12px; font-weight: 700; }
     .v { color: #333; font-size: 14px; word-break: break-all; }
+    .input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    .input:focus { border-color: #667eea; }
+    .btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:disabled { background: #bbb; cursor: not-allowed; }
+    .hint { margin-top: 12px; font-size: 12px; color: #666; }
   </style>
 </head>
 <body>
@@ -90,6 +109,14 @@
       </div>
 
       <div class="kv">
+        <div class="k">nickname</div>
+        <div class="v">
+          <input class="input" id="nicknameInput" placeholder="Enter nickname" />
+          <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+            <button class="btn btn-primary" id="saveBtn">Save</button>
+            <span class="hint" id="saveHint"></span>
+          </div>
+        </div>
         <div class="k">image_url</div>
         <div class="v" id="imageUrl">-</div>
       </div>

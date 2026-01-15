@@ -77,6 +77,24 @@ class FriendsAPI {
   }
 
   /**
+   * 更新自己的 profile (nickname)
+   */
+  async updateProfile(nickname) {
+    const token = await this.getAuthToken();
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/update-profile`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ nickname }),
+    });
+
+    return await this.parseEnvelope(response);
+  }
+
+  /**
    * 搜尋使用者
    */
   async searchFriend(query) {

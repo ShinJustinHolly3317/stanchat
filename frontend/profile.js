@@ -8,6 +8,9 @@ const backBtn = document.getElementById('backBtn');
 const errorDiv = document.getElementById('error');
 const avatarDiv = document.getElementById('avatar');
 const nicknameEl = document.getElementById('nickname');
+const nicknameInput = document.getElementById('nicknameInput');
+const saveBtn = document.getElementById('saveBtn');
+const saveHint = document.getElementById('saveHint');
 const uidEl = document.getElementById('uid');
 const imageUrlEl = document.getElementById('imageUrl');
 
@@ -55,6 +58,7 @@ async function loadProfile() {
   try {
     const profile = await FriendsAPI.getProfile(uid);
     nicknameEl.textContent = profile.nickname || 'Unknown';
+    nicknameInput.value = profile.nickname || '';
     uidEl.textContent = profile.id || '-';
     imageUrlEl.textContent = profile.image_url || '-';
     setAvatar(profile);
@@ -64,12 +68,39 @@ async function loadProfile() {
   }
 }
 
+async function saveProfile() {
+  clearError();
+  saveHint.textContent = '';
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  try {
+    const nickname = nicknameInput.value.trim();
+    const res = await FriendsAPI.updateProfile(nickname);
+    nicknameEl.textContent = nickname;
+    saveHint.textContent = `Saved (${res.updated_at})`;
+  } catch (e) {
+    showError(e.message || String(e));
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save';
+  }
+}
+
 backBtn.addEventListener('click', () => {
   // Prefer going back if possible, otherwise go home
   if (history.length > 1) {
     history.back();
   } else {
     window.location.href = 'welcome.html';
+  }
+});
+
+saveBtn.addEventListener('click', saveProfile);
+nicknameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    saveProfile();
   }
 });
 
