@@ -372,6 +372,47 @@
     
     let currentUserId = null;
     let currentQuestion = null;
+  let currentPendingId = null;
+
+    function safeFileExt(filename) {
+      const idx = filename.lastIndexOf('.');
+      if (idx === -1) return '';
+      const ext = filename.slice(idx + 1).toLowerCase().replace(/[^a-z0-9]/g, '');
+      return ext ? `.${ext}` : '';
+    }
+
+    async function uploadVoiceToBucket({ pendingId, file }) {
+      if (!pendingId) {
+        throw new Error('Missing pendingId for upload');
+      }
+      if (!currentUserId) {
+        throw new Error('Not authenticated');
+      }
+      if (!file) {
+        throw new Error('No file selected');
+      }
+
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const ext = safeFileExt(file.name) || (file.type?.includes('webm') ? '.webm' : '');
+      const path = `${currentUserId}/${pendingId}/${ts}${ext}`;
+
+      const { data, error } = await supabase.storage.from('stancode-voices').upload(path, file, {
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Upload failed');
+      }
+
+      // If bucket is public, this will work; if private, it returns a URL but access may be denied.
+      const { data: publicUrlData } = supabase.storage.from('stancode-voices').getPublicUrl(path);
+
+      return {
+        path: data?.path || path,
+        publicUrl: publicUrlData?.publicUrl || null,
+      };
+    }
     
     function showError(message) {
       errorDiv.textContent = message;
@@ -456,8 +497,9 @@
     }
     
     // 顯示問題
-    function showQuestion(question) {
+    function showQuestion(question, pendingId) {
       currentQuestion = question;
+      currentPendingId = pendingId || null;
       
       const questionDiv = document.createElement('div');
       questionDiv.className = 'question-container';
@@ -516,8 +558,53 @@
       } else if (question.category === 'speak') {
         const hintDiv = document.createElement('div');
         hintDiv.className = 'question-speak-hint';
-        hintDiv.textContent = '🎤 Please record your answer (recording feature coming soon)';
+        hintDiv.textContent = '🎤 Upload your voice answer (audio file) to bucket: stancode-voices';
         questionDiv.appendChild(hintDiv);
+
+        const uploadWrap = document.createElement('div');
+        uploadWrap.style.marginTop = '12px';
+        uploadWrap.style.display = 'flex';
+        uploadWrap.style.flexDirection = 'column';
+        uploadWrap.style.gap = '10px';
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'audio/*';
+
+        const uploadBtn = document.createElement('button');
+        uploadBtn.className = 'question-submit-btn';
+        uploadBtn.textContent = 'Upload voice';
+
+        const statusDiv = document.createElement('div');
+        statusDiv.style.fontSize = '12px';
+        statusDiv.style.color = '#666';
+
+        uploadBtn.onclick = async () => {
+          try {
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            statusDiv.textContent = '';
+
+            const file = fileInput.files?.[0];
+            const res = await uploadVoiceToBucket({ pendingId: currentPendingId, file });
+
+            statusDiv.innerHTML = `
+              ✓ Uploaded<br/>
+              <div><b>path</b>: ${res.path}</div>
+              ${res.publicUrl ? `<div><b>publicUrl</b>: <a href="${res.publicUrl}" target="_blank" rel="noreferrer">open</a></div>` : ''}
+            `;
+          } catch (e) {
+            statusDiv.textContent = `Upload failed: ${e.message || e}`;
+          } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload voice';
+          }
+        };
+
+        uploadWrap.appendChild(fileInput);
+        uploadWrap.appendChild(uploadBtn);
+        uploadWrap.appendChild(statusDiv);
+        questionDiv.appendChild(uploadWrap);
       }
       
       messagesArea.appendChild(questionDiv);
@@ -564,7 +651,7 @@
         
         // 顯示問題
         if (result.question) {
-          showQuestion(result.question);
+          showQuestion(result.question, result.pending_id);
         }
         
         // 更新最後一則訊息，移除 pending 狀態
