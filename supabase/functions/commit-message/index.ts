@@ -45,11 +45,11 @@ serve(async (req) => {
     // accepted but unused for now
     const audioPath = body?.audio_path;
 
-    if (!pendingId || typeof pendingId !== 'string') {
+    if (!pendingId) {
       return jsonErr('1100', 'pending_id is required (string)', 400);
     }
 
-    if (!category || typeof category !== 'string') {
+    if (!category) {
       return jsonErr('1100', 'category is required (string)', 400);
     }
 
