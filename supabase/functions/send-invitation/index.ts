@@ -64,8 +64,8 @@ serve(async (req) => {
     // 檢查是否已有關係
     // friendships 表使用 user_one_id 和 user_two_id，需要檢查兩個方向
     // 為了保持一致性，總是將較小的 user_id 放在 user_one_id
-    const userId1 = currentUserId < target_user_id ? currentUserId : target_user_id;
-    const userId2 = currentUserId < target_user_id ? target_user_id : currentUserId;
+    const userId1 = currentUserId;
+    const userId2 = target_user_id;
 
     const { data: existingFriendship, error: friendshipError } = await supabase
       .from('friendships')
