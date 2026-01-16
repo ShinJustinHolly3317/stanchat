@@ -132,8 +132,9 @@ class FriendsAPI {
 
   /**
    * 接受或拒絕邀請
+   * requestId = friendships.id (primary key)
    */
-  async acceptInvitation(senderUserId, action) {
+  async acceptInvitation(requestId, action) {
     if (action !== 'accept' && action !== 'decline') {
       throw new Error('Action must be "accept" or "decline"');
     }
@@ -147,7 +148,7 @@ class FriendsAPI {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        request_id: senderUserId,
+        request_id: requestId,
         action: action,
       }),
     });

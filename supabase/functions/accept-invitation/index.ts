@@ -49,35 +49,13 @@ serve(async (req) => {
       return jsonErr('1100', 'action must be "accept" or "decline"', 400);
     }
 
-    // 查詢邀請記錄
-    // request_id 可能是 friendship 的 id 或其他識別碼
-    // 這裡假設 request_id 是發送邀請的使用者 ID
-    // 或者可以建立一個 friend_requests 表來追蹤邀請
-    // 目前使用 friendships 表，request_id 應該是對方的 user_id
-
-    const targetUserId = request_id;
-
-    // 檢查目標使用者是否存在
-    const { data: targetProfile, error: profileError } = await supabase
-      .from('user_profile')
-      .select('uid')
-      .eq('uid', targetUserId)
-      .single();
-
-    if (profileError || !targetProfile) {
-      return jsonErr('1404', 'Target user not found', 404);
-    }
-
-    // 查詢 friendship 記錄
-    // 由於記錄是排序的（較小的 ID 在 user_one_id），需要檢查兩個方向
-    const userId1 = request_id;
-    const userId2 = currentUserId;
+    // 查詢邀請記錄 (request_id = friendships.id)
+    const friendshipId = request_id;
 
     const { data: friendship, error: friendshipError } = await supabase
       .from('friendships')
-      .select('status, user_one_id, user_two_id')
-      .eq('user_one_id', userId1)
-      .eq('user_two_id', userId2)
+      .select('id, status, user_one_id, user_two_id')
+      .eq('id', friendshipId)
       .maybeSingle();
 
     if (friendshipError) {
@@ -94,11 +72,8 @@ serve(async (req) => {
     }
 
     // 確認當前使用者是接收方
-    // 由於記錄是排序的（較小的 ID 在 user_one_id），接收方可能是 user_one_id 或 user_two_id
-    // 發送者是 targetUserId，接收者是 currentUserId
-    const isCurrentUserReceiver =
-      (friendship.user_one_id === currentUserId && friendship.user_two_id === targetUserId) ||
-      (friendship.user_one_id === targetUserId && friendship.user_two_id === currentUserId);
+    // send-invitation 使用 user_one_id=sender, user_two_id=receiver
+    const isCurrentUserReceiver = String(friendship.user_two_id) === String(currentUserId);
 
     if (!isCurrentUserReceiver) {
       return jsonErr('1004', 'You are not the recipient of this invitation', 403);
@@ -106,6 +81,7 @@ serve(async (req) => {
 
     const now = new Date().toISOString(); // ISO 8601 timestamp
     let roomId = null;
+    const targetUserId = friendship.user_one_id;
 
     if (action === 'accept') {
       // 接受邀請：更新狀態為 friend
@@ -114,8 +90,6 @@ serve(async (req) => {
         friendship_user_one: friendship.user_one_id,
         friendship_user_two: friendship.user_two_id,
         friendship_status: friendship.status,
-        userId1,
-        userId2,
         currentUserId,
         targetUserId,
       });
@@ -123,9 +97,8 @@ serve(async (req) => {
       // 先確認記錄仍然存在且狀態為 pending
       const { data: verifyFriendship, error: verifyError } = await supabase
         .from('friendships')
-        .select('user_one_id, user_two_id, status')
-        .eq('user_one_id', friendship.user_one_id)
-        .eq('user_two_id', friendship.user_two_id)
+        .select('id, status')
+        .eq('id', friendship.id)
         .eq('status', 'pending')
         .maybeSingle();
 
@@ -146,8 +119,7 @@ serve(async (req) => {
           status: 'friend',
           updated_at: now,
         })
-        .eq('user_one_id', friendship.user_one_id)
-        .eq('user_two_id', friendship.user_two_id)
+        .eq('id', friendship.id)
         .eq('status', 'pending') // 確保只更新 pending 狀態的記錄
         .select()
         .maybeSingle();
@@ -190,13 +162,24 @@ serve(async (req) => {
         ]);
 
         // 發送通知給發送邀請的使用者
+        const { data: currentProfile } = await serviceClient
+          .from('user_profile')
+          .select('uid, name, custom_user_id, image_url')
+          .eq('uid', currentUserId)
+          .maybeSingle();
+
         await serviceClient.channel(`user:${targetUserId}`).send({
           type: 'broadcast',
           event: 'friend_request_accepted',
           payload: {
-            from_user_id: currentUserId,
+            request_id: friendship.id,
+            sender: {
+              id: currentUserId,
+              nickname: currentProfile?.name || currentProfile?.custom_user_id || 'Unknown',
+              avatar_url: currentProfile?.image_url || null,
+            },
+            sent_at: new Date().toISOString(),
             room_id: roomId,
-            timestamp: new Date().toISOString(),
           },
         });
       }
@@ -206,8 +189,7 @@ serve(async (req) => {
       const { error: deleteError } = await supabase
         .from('friendships')
         .delete()
-        .eq('user_one_id', friendship.user_one_id)
-        .eq('user_two_id', friendship.user_two_id);
+        .eq('id', friendship.id);
 
       if (deleteError) {
         return jsonErr('9000', 'Failed to decline invitation', 500);
@@ -218,12 +200,23 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+      const { data: currentProfile } = await serviceClient
+        .from('user_profile')
+        .select('uid, name, custom_user_id, image_url')
+        .eq('uid', currentUserId)
+        .maybeSingle();
+
       await serviceClient.channel(`user:${targetUserId}`).send({
         type: 'broadcast',
         event: 'friend_request_declined',
         payload: {
-          from_user_id: currentUserId,
-          timestamp: new Date().toISOString(),
+          request_id: friendship.id,
+          sender: {
+            id: currentUserId,
+            nickname: currentProfile?.name || currentProfile?.custom_user_id || 'Unknown',
+            avatar_url: currentProfile?.image_url || null,
+          },
+          sent_at: new Date().toISOString(),
         },
       });
     }

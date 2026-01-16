@@ -69,7 +69,7 @@ serve(async (req) => {
 
     const { data: existingFriendship, error: friendshipError } = await supabase
       .from('friendships')
-      .select('status, user_one_id, user_two_id')
+      .select('id, status, user_one_id, user_two_id')
       .eq('user_one_id', userId1)
       .eq('user_two_id', userId2)
       .maybeSingle();
@@ -113,16 +113,22 @@ serve(async (req) => {
           updated_at: now,
         })
         .eq('user_one_id', userId1)
-        .eq('user_two_id', userId2);
+        .eq('user_two_id', userId2)
+        .select('id')
+        .maybeSingle();
     } else {
       // 建立新記錄
-      result = await supabase.from('friendships').insert({
-        user_one_id: userId1,
-        user_two_id: userId2,
-        status: 'pending',
-        created_at: now,
-        updated_at: now,
-      });
+      result = await supabase
+        .from('friendships')
+        .insert({
+          user_one_id: userId1,
+          user_two_id: userId2,
+          status: 'pending',
+          created_at: now,
+          updated_at: now,
+        })
+        .select('id')
+        .single();
     }
 
     if (result.error) {
@@ -139,11 +145,13 @@ serve(async (req) => {
       .eq('uid', currentUserId)
       .maybeSingle();
 
+    const requestId = existingFriendship?.id ?? result?.data?.id ?? result?.id;
+
     await serviceClient.channel(`user:${target_user_id}`).send({
       type: 'broadcast',
       event: 'friend_invitation',
       payload: {
-        request_id: currentUserId,
+        request_id: requestId,
         sender: {
           id: currentUserId,
           nickname: senderProfile?.name || senderProfile?.custom_user_id || 'Unknown',

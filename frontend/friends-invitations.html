@@ -218,16 +218,16 @@
     function addInvitationFromRealtime(payload) {
       if (!payload) return;
       const sender = payload.sender || {};
-      const userId = sender.id || payload.request_id;
+      const userId = sender.id;
       if (!userId) return;
 
       // Avoid duplicates
-      if (invitations.find((inv) => inv.user_id === userId)) {
+      if (invitations.find((inv) => String(inv.request_id) === String(payload.request_id))) {
         return;
       }
 
       const invitation = {
-        request_id: payload.request_id || userId,
+        request_id: payload.request_id,
         user_id: userId,
         nickname: sender.nickname || 'Unknown User',
         image_url: sender.avatar_url || null,
@@ -302,7 +302,7 @@
     function renderInvitation(invitation) {
       const item = document.createElement('div');
       item.className = 'invitation-item';
-      item.id = `invitation-${invitation.user_id}`;
+      item.id = `invitation-${invitation.request_id}`;
       
       const firstLetter = (invitation.nickname || 'U')[0].toUpperCase();
       
@@ -322,17 +322,17 @@
           </div>
         </div>
         <div class="invitation-actions">
-          <button class="btn btn-success" onclick="handleAccept('${invitation.user_id}')">Accept</button>
-          <button class="btn btn-secondary" onclick="handleDecline('${invitation.user_id}')">Decline</button>
+          <button class="btn btn-success" onclick="handleAccept('${invitation.request_id}')">Accept</button>
+          <button class="btn btn-secondary" onclick="handleDecline('${invitation.request_id}')">Decline</button>
         </div>
       `;
       
       invitationsList.appendChild(item);
     }
     
-    window.handleAccept = async (userId) => {
+    window.handleAccept = async (requestId) => {
       try {
-        const result = await FriendsAPI.acceptInvitation(userId, 'accept');
+        const result = await FriendsAPI.acceptInvitation(requestId, 'accept');
         if (result.room_id) {
           alert(`Friend request accepted! Room ID: ${result.room_id}`);
         } else {
@@ -344,9 +344,9 @@
       }
     };
     
-    window.handleDecline = async (userId) => {
+    window.handleDecline = async (requestId) => {
       try {
-        await FriendsAPI.acceptInvitation(userId, 'decline');
+        await FriendsAPI.acceptInvitation(requestId, 'decline');
         alert('Friend request declined');
         loadInvitations();
       } catch (error) {
@@ -372,9 +372,15 @@
         },
         onInvitationAccepted: (payload) => {
           console.log('Invitation accepted:', payload);
+          if (payload?.sender?.nickname) {
+            alert(`Friend request accepted: ${payload.sender.nickname}`);
+          }
         },
         onInvitationDeclined: (payload) => {
           console.log('Invitation declined:', payload);
+          if (payload?.sender?.nickname) {
+            alert(`Friend request declined: ${payload.sender.nickname}`);
+          }
         },
       });
     }

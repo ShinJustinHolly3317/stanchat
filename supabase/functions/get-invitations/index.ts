@@ -43,7 +43,7 @@ serve(async (req) => {
     // 表示當前使用者收到的邀請
     const { data: pendingInvitations, error: queryError } = await supabase
       .from('friendships')
-      .select('user_one_id, user_two_id, created_at, updated_at')
+      .select('id, user_one_id, user_two_id, created_at, updated_at')
       .eq('user_two_id', currentUserId)
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
@@ -80,7 +80,7 @@ serve(async (req) => {
     const invitations = pendingInvitations.map((invitation) => {
       const profile = profileMap.get(invitation.user_one_id);
       return {
-        request_id: invitation.user_one_id,
+        request_id: invitation.id,
         user_id: invitation.user_one_id,
         nickname: profile?.name || profile?.custom_user_id || 'Unknown User',
         image_url: profile?.image_url || null,
