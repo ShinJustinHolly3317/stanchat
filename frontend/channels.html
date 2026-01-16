@@ -272,6 +272,8 @@
     const channelsGrid = document.getElementById('channelsGrid');
     const loading = document.getElementById('loading');
     const errorDiv = document.getElementById('error');
+    const channelCardMap = new Map();
+    let inboxChannel = null;
     
     function showError(message) {
       errorDiv.textContent = message;
@@ -336,6 +338,7 @@
       `;
       
       channelsGrid.appendChild(channelItem);
+      channelCardMap.set(String(channel.id), channelItem);
     }
     
     async function loadChannels() {
@@ -357,6 +360,7 @@
         // 從 API 取得頻道列表
         const result = await FriendsAPI.getChannels();
         const channels = result.channels || [];
+        channelCardMap.clear();
         
         if (channels.length === 0) {
           channelsGrid.innerHTML = `
@@ -383,9 +387,48 @@
         loading.style.display = 'none';
       }
     }
+
+    function updateChannelLastMessage(payload) {
+      const roomId = payload?.room_id;
+      if (!roomId) return;
+      const card = channelCardMap.get(String(roomId));
+      if (!card) return;
+
+      const lastText = payload?.last_message?.text || 'No messages yet';
+      const lastTime = payload?.last_message?.created_at
+        ? new Date(payload.last_message.created_at).toLocaleString()
+        : '';
+
+      const textEl = card.querySelector('.last-message-text');
+      const timeEl = card.querySelector('.last-message-time');
+      if (textEl) textEl.textContent = lastText;
+      if (timeEl) timeEl.textContent = lastTime;
+    }
+
+    async function setupInboxRealtime() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) return;
+
+      if (inboxChannel) {
+        supabase.removeChannel(inboxChannel);
+      }
+
+      const userId = session.user.id;
+      inboxChannel = supabase
+        .channel(`inbox:${userId}`)
+        .on('broadcast', { event: 'channel_lst_msg_update' }, (payload) => {
+          updateChannelLastMessage(payload.payload || payload);
+        })
+        .subscribe((status) => {
+          console.log('inbox realtime status:', status);
+        });
+    }
     
     // 初始化
     loadChannels();
+    setupInboxRealtime();
   </script>
 </body>
 </html>

@@ -105,6 +105,39 @@ serve(async (req) => {
       console.warn('Failed to delete pending_messages row:', deleteError);
     }
 
+    // Broadcast last message update to inbox:{user_id} for channel members
+    try {
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      const { data: members, error: membersError } = await serviceClient
+        .from('channel_users')
+        .select('uid')
+        .eq('channel_id', pending.channel_id);
+
+      if (!membersError && members) {
+        const payload = {
+          room_id: pending.channel_id,
+          last_message: {
+            text: inserted?.message_content ?? pending.content,
+            created_at: inserted?.created_at ?? now,
+          },
+          unread_total: 0,
+        };
+
+        await Promise.all(
+          members.map((m) =>
+            serviceClient.channel(`inbox:${m.uid}`).send({
+              type: 'broadcast',
+              event: 'channel_lst_msg_update',
+              payload,
+            })
+          )
+        );
+      }
+    } catch (broadcastError) {
+      console.warn('Failed to broadcast channel last message:', broadcastError);
+    }
+
     return jsonOk({
       status: 'success',
       is_correct: true,
