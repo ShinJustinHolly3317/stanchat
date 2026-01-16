@@ -133,12 +133,23 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    const { data: senderProfile } = await serviceClient
+      .from('user_profile')
+      .select('uid, name, custom_user_id, image_url')
+      .eq('uid', currentUserId)
+      .maybeSingle();
+
     await serviceClient.channel(`user:${target_user_id}`).send({
       type: 'broadcast',
       event: 'friend_invitation',
       payload: {
-        from_user_id: currentUserId,
-        timestamp: new Date().toISOString(),
+        request_id: currentUserId,
+        sender: {
+          id: currentUserId,
+          nickname: senderProfile?.name || senderProfile?.custom_user_id || 'Unknown',
+          avatar_url: senderProfile?.image_url || null,
+        },
+        sent_at: now,
       },
     });
 

@@ -633,6 +633,7 @@
             filter: `channel_id=eq.${channelId}`,
           },
           (payload) => {
+            console.log('room chat mesage payload', payload)
             const row = payload.new || payload.record || {};
             const msgId = row.id ?? null;
             const msgUid = row.uid ?? null;

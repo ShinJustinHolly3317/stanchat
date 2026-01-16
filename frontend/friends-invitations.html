@@ -215,6 +215,36 @@
     
     let invitations = [];
     let realtimeChannels = null;
+    function addInvitationFromRealtime(payload) {
+      if (!payload) return;
+      const sender = payload.sender || {};
+      const userId = sender.id || payload.request_id;
+      if (!userId) return;
+
+      // Avoid duplicates
+      if (invitations.find((inv) => inv.user_id === userId)) {
+        return;
+      }
+
+      const invitation = {
+        request_id: payload.request_id || userId,
+        user_id: userId,
+        nickname: sender.nickname || 'Unknown User',
+        image_url: sender.avatar_url || null,
+        created_at: payload.sent_at || new Date().toISOString(),
+        updated_at: payload.sent_at || new Date().toISOString(),
+      };
+
+      invitations.unshift(invitation);
+
+      // Remove empty state if present
+      const emptyState = invitationsList.querySelector('.empty-state');
+      if (emptyState) {
+        emptyState.remove();
+      }
+
+      renderInvitation(invitation);
+    }
     
     function showError(message) {
       errorDiv.textContent = message;
@@ -337,16 +367,14 @@
       realtimeChannels = FriendsAPI.setupRealtimeListeners(userId, {
         onInvitationReceived: (payload) => {
           console.log('New invitation received:', payload);
-          // 重新載入邀請列表
-          loadInvitations();
+          // 不再重新呼叫 get-invitations，直接用 realtime payload
+          addInvitationFromRealtime(payload);
         },
         onInvitationAccepted: (payload) => {
           console.log('Invitation accepted:', payload);
-          loadInvitations();
         },
         onInvitationDeclined: (payload) => {
           console.log('Invitation declined:', payload);
-          loadInvitations();
         },
       });
     }

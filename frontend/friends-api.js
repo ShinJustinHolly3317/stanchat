@@ -287,7 +287,7 @@ class FriendsAPI {
    * 設定 Realtime 監聽
    */
   setupRealtimeListeners(userId, callbacks) {
-    // 監聽 inbox 事件（收到邀請）
+    // 監聽 user 事件（收到邀請）
     const inboxChannel = supabase
       .channel(`user:${userId}`)
       .on('broadcast', { event: 'friend_invitation' }, (payload) => {
