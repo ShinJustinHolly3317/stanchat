@@ -377,6 +377,9 @@
 
     let roomChannel = null;
     const seenMessageIds = new Set();
+    let historyCursor = null; // oldest loaded message id (for keyset pagination)
+    let isLoadingHistory = false;
+    let hasMoreHistory = true;
 
     function safeFileExt(filename) {
       const idx = filename.lastIndexOf('.');
@@ -513,6 +516,103 @@
       messageDiv.appendChild(contentDiv);
       messagesArea.appendChild(messageDiv);
       messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    // 將訊息插入到頂部（載入舊訊息用）
+    function prependMessage(content, isSent, messageId) {
+      const emptyState = messagesArea.querySelector('.empty-state');
+      if (emptyState) {
+        emptyState.remove();
+      }
+
+      const key = messageId != null ? String(messageId) : null;
+      if (key && seenMessageIds.has(key)) {
+        return;
+      }
+      if (key) {
+        seenMessageIds.add(key);
+      }
+
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isSent ? 'sent' : ''}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = isSent ? 'Y' : 'F';
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+
+      const textDiv = document.createElement('div');
+      textDiv.className = 'message-text';
+      textDiv.textContent = content;
+      contentDiv.appendChild(textDiv);
+
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'message-time';
+      timeDiv.textContent = new Date().toLocaleTimeString();
+      contentDiv.appendChild(timeDiv);
+
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(contentDiv);
+
+      messagesArea.insertBefore(messageDiv, messagesArea.firstChild);
+    }
+
+    async function loadInitialMessages() {
+      isLoadingHistory = true;
+      try {
+        const res = await FriendsAPI.getMessages(roomId);
+        const msgs = res.messages || [];
+        // msgs are newest -> older; render oldest first so UI scrolls naturally
+        const ordered = [...msgs].reverse();
+        ordered.forEach((m) => {
+          const isSent = m.sender?.id && currentUserId ? String(m.sender.id) === String(currentUserId) : false;
+          addMessage(m.content || '', isSent, false, m.id);
+        });
+        historyCursor = res.cursor ?? null;
+        hasMoreHistory = Boolean(historyCursor);
+      } catch (e) {
+        showError(e.message || e);
+      } finally {
+        isLoadingHistory = false;
+      }
+    }
+
+    async function loadMoreHistoryIfNeeded() {
+      if (isLoadingHistory || !hasMoreHistory || historyCursor == null) return;
+      if (messagesArea.scrollTop > 20) return; // only when near top
+
+      isLoadingHistory = true;
+      const prevScrollHeight = messagesArea.scrollHeight;
+
+      try {
+        const res = await FriendsAPI.getMessages(roomId, historyCursor);
+        const msgs = res.messages || [];
+        if (msgs.length === 0) {
+          hasMoreHistory = false;
+          historyCursor = null;
+          return;
+        }
+
+        // msgs are newest -> older (but all older than previous cursor). We prepend oldest first.
+        const ordered = [...msgs].reverse();
+        ordered.forEach((m) => {
+          const isSent = m.sender?.id && currentUserId ? String(m.sender.id) === String(currentUserId) : false;
+          prependMessage(m.content || '', isSent, m.id);
+        });
+
+        historyCursor = res.cursor ?? null;
+        hasMoreHistory = Boolean(historyCursor);
+
+        // keep scroll position stable after prepending
+        const newScrollHeight = messagesArea.scrollHeight;
+        messagesArea.scrollTop = newScrollHeight - prevScrollHeight;
+      } catch (e) {
+        showError(e.message || e);
+      } finally {
+        isLoadingHistory = false;
+      }
     }
 
     function setupRoomRealtime(channelId) {
@@ -784,7 +884,12 @@
       const authenticated = await checkAuth();
       if (authenticated) {
         await loadChannelInfo();
+        await loadInitialMessages();
         setupRoomRealtime(roomId);
+
+        messagesArea.addEventListener('scroll', () => {
+          loadMoreHistoryIfNeeded();
+        });
       }
     })();
 

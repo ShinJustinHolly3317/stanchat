@@ -133,7 +133,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    await serviceClient.channel(`inbox:${target_user_id}`).send({
+    await serviceClient.channel(`user:${target_user_id}`).send({
       type: 'broadcast',
       event: 'friend_invitation',
       payload: {

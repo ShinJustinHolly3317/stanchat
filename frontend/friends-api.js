@@ -252,6 +252,30 @@ class FriendsAPI {
     return await this.parseEnvelope(response);
   }
 
+  /**
+   * 取得聊天室訊息（分頁，newest -> older）
+   * cursor: 上一頁最後一筆訊息 id（keyset）
+   */
+  async getMessages(roomId, cursor) {
+    const token = await this.getAuthToken();
+
+    const body = {
+      room_id: roomId,
+      ...(cursor !== undefined && cursor !== null ? { cursor } : {}),
+    };
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/get-messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    return await this.parseEnvelope(response);
+  }
+
   /** @deprecated duplicated; kept for backward compatibility during refactor */
   async createPendingMessage_duplicated(roomId, content) {
     return await this.createPendingMessage(roomId, content);
@@ -265,7 +289,7 @@ class FriendsAPI {
   setupRealtimeListeners(userId, callbacks) {
     // 監聽 inbox 事件（收到邀請）
     const inboxChannel = supabase
-      .channel(`inbox:${userId}`)
+      .channel(`user:${userId}`)
       .on('broadcast', { event: 'friend_invitation' }, (payload) => {
         if (callbacks.onInvitationReceived) {
           callbacks.onInvitationReceived(payload.payload);
