@@ -471,7 +471,7 @@
     }
     
     // 新增訊息到畫面
-    function addMessage(content, isSent = true, isPending = false, messageId = null) {
+    function addMessage(content, isSent = true, isPending = false, messageId = null, timestamp = null) {
       const emptyState = messagesArea.querySelector('.empty-state');
       if (emptyState) {
         emptyState.remove();
@@ -509,7 +509,9 @@
       
       const timeDiv = document.createElement('div');
       timeDiv.className = 'message-time';
-      timeDiv.textContent = new Date().toLocaleTimeString();
+      // Use provided timestamp or current time
+      const dateObj = timestamp ? new Date(timestamp) : new Date();
+      timeDiv.textContent = dateObj.toLocaleTimeString();
       contentDiv.appendChild(timeDiv);
       
       messageDiv.appendChild(avatar);
@@ -519,7 +521,7 @@
     }
 
     // 將訊息插入到頂部（載入舊訊息用）
-    function prependMessage(content, isSent, messageId) {
+    function prependMessage(content, isSent, messageId, timestamp = null) {
       const emptyState = messagesArea.querySelector('.empty-state');
       if (emptyState) {
         emptyState.remove();
@@ -550,7 +552,8 @@
 
       const timeDiv = document.createElement('div');
       timeDiv.className = 'message-time';
-      timeDiv.textContent = new Date().toLocaleTimeString();
+      const dateObj = timestamp ? new Date(timestamp) : new Date();
+      timeDiv.textContent = dateObj.toLocaleTimeString();
       contentDiv.appendChild(timeDiv);
 
       messageDiv.appendChild(avatar);
@@ -568,7 +571,7 @@
         const ordered = [...msgs].reverse();
         ordered.forEach((m) => {
           const isSent = m.sender?.id && currentUserId ? String(m.sender.id) === String(currentUserId) : false;
-          addMessage(m.content || '', isSent, false, m.id);
+          addMessage(m.content || '', isSent, false, m.id, m.created_at);
         });
         historyCursor = res.cursor ?? null;
         hasMoreHistory = Boolean(historyCursor);
@@ -599,7 +602,7 @@
         const ordered = [...msgs].reverse();
         ordered.forEach((m) => {
           const isSent = m.sender?.id && currentUserId ? String(m.sender.id) === String(currentUserId) : false;
-          prependMessage(m.content || '', isSent, m.id);
+          prependMessage(m.content || '', isSent, m.id, m.created_at);
         });
 
         historyCursor = res.cursor ?? null;
@@ -643,7 +646,7 @@
             if (!content) return;
 
             const isSent = msgUid && currentUserId ? String(msgUid) === String(currentUserId) : false;
-            addMessage(content, isSent, false, msgId);
+            addMessage(content, isSent, false, msgId, row.created_at);
           }
         )
         .subscribe((status) => {
@@ -810,7 +813,7 @@
 
       // Render committed message into the chat stream (best-effort)
       if (committedRecord && committedRecord.content) {
-        addMessage(committedRecord.content, true, false, committedRecord.id ?? null);
+        addMessage(committedRecord.content, true, false, committedRecord.id ?? null, committedRecord.created_at);
       }
 
       currentQuestion = null;

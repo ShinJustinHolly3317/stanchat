@@ -79,7 +79,7 @@ serve(async (req) => {
       return jsonErr('1004', 'You are not the recipient of this invitation', 403);
     }
 
-    const now = new Date().toISOString(); // ISO 8601 timestamp
+    const now = Date.now();
     let roomId = null;
     const targetUserId = friendship.user_one_id;
 
@@ -178,7 +178,7 @@ serve(async (req) => {
               nickname: currentProfile?.name || currentProfile?.custom_user_id || 'Unknown',
               avatar_url: currentProfile?.image_url || null,
             },
-            sent_at: new Date().toISOString(),
+            sent_at: now,
             room_id: roomId,
           },
         });
@@ -216,7 +216,7 @@ serve(async (req) => {
             nickname: currentProfile?.name || currentProfile?.custom_user_id || 'Unknown',
             avatar_url: currentProfile?.image_url || null,
           },
-          sent_at: new Date().toISOString(),
+          sent_at: now,
         },
       });
     }

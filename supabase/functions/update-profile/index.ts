@@ -43,7 +43,7 @@ serve(async (req) => {
       return jsonErr('1100', 'nickname is required (non-empty string)', 400);
     }
 
-    const now = new Date().toISOString();
+    const now = Date.now();
 
     // Update profile; if missing, create it (best effort)
     const { data: updated, error: updateError } = await supabase

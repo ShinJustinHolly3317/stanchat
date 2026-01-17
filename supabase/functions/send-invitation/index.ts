@@ -99,7 +99,7 @@ serve(async (req) => {
     }
 
     // 建立或更新 friendship 記錄
-    const now = new Date().toISOString(); // ISO 8601 timestamp
+    const now = Date.now();
 
     let result;
     if (existingFriendship) {

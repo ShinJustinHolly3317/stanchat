@@ -41,7 +41,7 @@ serve(async (req) => {
     // { fcm_token, app_version, platform }
     await req.json().catch(() => ({}));
 
-    const now = new Date().toISOString();
+    const now = Date.now();
 
     // Load user profile
     const { data: profile, error: profileError } = await supabase

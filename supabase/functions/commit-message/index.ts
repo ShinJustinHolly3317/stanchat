@@ -75,7 +75,7 @@ serve(async (req) => {
     // Write final message
     // NOTE: We only insert the minimal fields we know from the project docs/code.
     // If your DB schema has additional required fields, we can adjust later.
-    const now = new Date().toISOString();
+    const now = Date.now();
     const { data: inserted, error: insertError } = await supabase
       .from('chat_messages')
       .insert({

@@ -11,13 +11,6 @@ import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
 const DEFAULT_TTL_MINUTES = 10;
 
-/** @param {number} minutes */
-function addMinutesToNowIso(minutes: number) {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() + minutes);
-  return d.toISOString();
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -77,8 +70,8 @@ serve(async (req) => {
 
     const picked = questions[Math.floor(Math.random() * questions.length)];
 
-    const now = new Date().toISOString();
-    const expiresAt = addMinutesToNowIso(DEFAULT_TTL_MINUTES);
+    const now = Date.now();
+    const expiresAt = now + DEFAULT_TTL_MINUTES * 60 * 1000;
 
     const { data: pending, error: pendingError } = await supabase
       .from('pending_messages')
