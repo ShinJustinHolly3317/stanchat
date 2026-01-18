@@ -213,7 +213,7 @@ class FriendsAPI {
   async createPendingMessage(roomId, content) {
     const token = await this.getAuthToken();
 
-    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/create-pending-message`, {
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/start-new-message`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

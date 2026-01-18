@@ -57,7 +57,7 @@ serve(async (req) => {
     return jsonOk({
       id: profile.uid,
       nickname: profile.name || profile.custom_user_id || 'Unknown',
-      image_url: profile.image_url || null,
+      avatar_url: profile.image_url || null,
     });
   } catch (error) {
     return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
