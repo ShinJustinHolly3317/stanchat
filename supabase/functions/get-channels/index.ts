@@ -149,7 +149,7 @@ serve(async (req) => {
           userProfiles?.map((profile) => ({
             id: profile.uid,
             nickname: profile.name || profile.custom_user_id || 'Unknown User',
-            image_url: profile.image_url || null,
+            avatar_url: profile.image_url || null,
           })) || [];
 
         return {

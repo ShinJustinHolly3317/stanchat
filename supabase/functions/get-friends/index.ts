@@ -103,7 +103,7 @@ serve(async (req) => {
         return {
           user_id: profile.uid,
           nickname: profile.name || profile.custom_user_id || 'Unknown User',
-          image_url: profile.image_url || null,
+          avatar_url: profile.image_url || null,
           friendship_created_at: friendship?.created_at || null,
           friendship_updated_at: friendship?.updated_at || null,
         };
