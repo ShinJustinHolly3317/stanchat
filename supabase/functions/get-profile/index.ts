@@ -36,6 +36,14 @@ serve(async (req) => {
     const url = new URL(req.url);
     const targetUid = url.searchParams.get('uid') || user.id;
 
+    /**
+     * @typedef {Object} UserProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     * @property {string|null} name - 使用者名稱 (user_profile.name)
+     * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+     * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+     */
+    /** @type {{ data: UserProfileRow | null, error: any }} */
     const { data: profile, error: profileError } = await supabase
       .from('user_profile')
       .select('uid, name, custom_user_id, image_url')
@@ -59,4 +67,3 @@ serve(async (req) => {
     return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
   }
 });
-

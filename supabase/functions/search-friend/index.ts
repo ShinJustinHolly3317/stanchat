@@ -55,6 +55,14 @@ serve(async (req) => {
     // 檢查是否為 UUID (可能是 user_id)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (uuidRegex.test(query)) {
+      /**
+       * @typedef {Object} UserProfileRow
+       * @property {string} uid - 使用者 UUID (user_profile.uid)
+       * @property {string|null} name - 使用者名稱 (user_profile.name)
+       * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+       * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+       */
+      /** @type {{ data: UserProfileRow | null, error: any }} */
       // 可能是 UUID，直接查詢 user_profile
       const { data: profile, error: profileError } = await supabase
         .from('user_profile')
@@ -70,6 +78,14 @@ serve(async (req) => {
         };
       }
     } else {
+      /**
+       * @typedef {Object} UserProfileRow
+       * @property {string} uid - 使用者 UUID (user_profile.uid)
+       * @property {string|null} name - 使用者名稱 (user_profile.name)
+       * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+       * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+       */
+      /** @type {{ data: UserProfileRow[] | null, error: any }} */
       // 可能是 email，從 auth.users 查詢
       // 注意: Supabase 不直接提供查詢 auth.users 的 API，需要透過 user_profile 的 email 欄位
       // 假設 user_profile 有 email 欄位，或需要透過其他方式查詢
@@ -105,6 +121,13 @@ serve(async (req) => {
     const userId1 = currentUserId < targetUserId ? currentUserId : targetUserId;
     const userId2 = currentUserId < targetUserId ? targetUserId : currentUserId;
 
+    /**
+     * @typedef {Object} FriendshipRow
+     * @property {string} status - 關係狀態 (friendships.status: 'pending' | 'friend' | 'blocked')
+     * @property {string} user_one_id - 使用者一 UUID (friendships.user_one_id)
+     * @property {string} user_two_id - 使用者二 UUID (friendships.user_two_id)
+     */
+    /** @type {{ data: FriendshipRow | null, error: any }} */
     const { data: friendship, error: friendshipError } = await supabase
       .from('friendships')
       .select('status, user_one_id, user_two_id')

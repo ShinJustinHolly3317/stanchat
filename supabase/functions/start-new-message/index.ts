@@ -49,6 +49,15 @@ serve(async (req) => {
       return jsonErr('1100', 'content is required (non-empty string)', 400);
     }
 
+    /**
+     * @typedef {Object} QuestionRow
+     * @property {number} id - 題目 ID (between_chat_questions.id)
+     * @property {string} category - 題目類別 (between_chat_questions.category)
+     * @property {string} title - 題目標題 (between_chat_questions.title)
+     * @property {string} content - 題目內容 (between_chat_questions.content)
+     * @property {string|null} options - 選項 JSON 字串 (between_chat_questions.options)
+     */
+    /** @type {{ data: QuestionRow[] | null, error: any }} */
     // 抽題：prototype 先隨機取 1 題
     // NOTE: 不用 order('random()') 是因為 postgrest 對 random 支援不穩；先用全量取再 random（資料少 OK）
     const { data: questions, error: questionError } = await supabase
@@ -69,6 +78,11 @@ serve(async (req) => {
     const now = Date.now();
     const expiresAt = now + DEFAULT_TTL_MINUTES * 60 * 1000;
 
+    /**
+     * @typedef {Object} PendingMessageRow
+     * @property {number} id - Pending message ID (pending_messages.id)
+     */
+    /** @type {{ data: PendingMessageRow | null, error: any }} */
     const { data: pending, error: pendingError } = await supabase
       .from('pending_messages')
       .insert({

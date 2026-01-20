@@ -49,6 +49,15 @@ serve(async (req) => {
       return jsonErr('1100', 'category is required (string)', 400);
     }
 
+    /**
+     * @typedef {Object} PendingMessageRow
+     * @property {number} id - Pending message ID (pending_messages.id)
+     * @property {number} channel_id - 頻道 ID (pending_messages.channel_id)
+     * @property {string} sender_uid - 發送者 UUID (pending_messages.sender_uid)
+     * @property {string} content - 訊息內容 (pending_messages.content)
+     * @property {number} created_at - 建立時間戳（毫秒）(pending_messages.created_at)
+     */
+    /** @type {{ data: PendingMessageRow | null, error: any }} */
     // Fetch pending message (ensure it belongs to current user)
     const { data: pending, error: pendingError } = await supabase
       .from('pending_messages')
@@ -68,6 +77,15 @@ serve(async (req) => {
       return jsonErr('1004', 'Forbidden', 403);
     }
 
+    /**
+     * @typedef {Object} ChatMessageRow
+     * @property {number} id - 訊息 ID (chat_messages.id)
+     * @property {number} channel_id - 頻道 ID (chat_messages.channel_id)
+     * @property {string} message_content - 訊息內容 (chat_messages.message_content)
+     * @property {string} uid - 發送者 UUID (chat_messages.uid)
+     * @property {number} created_at - 建立時間戳（毫秒）(chat_messages.created_at)
+     */
+    /** @type {{ data: ChatMessageRow | null, error: any }} */
     // Write final message
     // NOTE: We only insert the minimal fields we know from the project docs/code.
     // If your DB schema has additional required fields, we can adjust later.
@@ -105,6 +123,11 @@ serve(async (req) => {
     try {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      /**
+       * @typedef {Object} ChannelUserRow
+       * @property {string} uid - 使用者 UUID (channel_users.uid)
+       */
+      /** @type {{ data: ChannelUserRow[] | null, error: any }} */
       const { data: members, error: membersError } = await serviceClient
         .from('channel_users')
         .select('uid')

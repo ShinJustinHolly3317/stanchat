@@ -38,6 +38,14 @@ serve(async (req) => {
 
     const currentUserId = user.id;
 
+    /**
+     * @typedef {Object} FriendshipRow
+     * @property {string} user_one_id - 使用者一 UUID (friendships.user_one_id)
+     * @property {string} user_two_id - 使用者二 UUID (friendships.user_two_id)
+     * @property {number} created_at - 建立時間戳（毫秒）(friendships.created_at)
+     * @property {number} updated_at - 更新時間戳（毫秒）(friendships.updated_at)
+     */
+    /** @type {{ data: FriendshipRow[] | null, error: any }} */
     // 查詢所有好友關係
     // friendships 表中，status = 'friend' 且 (user_one_id = currentUserId OR user_two_id = currentUserId)
     const { data: friendships, error: friendshipsError } = await supabase
@@ -62,6 +70,14 @@ serve(async (req) => {
         : friendship.user_one_id;
     });
 
+    /**
+     * @typedef {Object} UserProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     * @property {string|null} name - 使用者名稱 (user_profile.name)
+     * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+     * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+     */
+    /** @type {{ data: UserProfileRow[] | null, error: any }} */
     // 取得好友的使用者資訊
     const { data: userProfiles, error: profilesError } = await supabase
       .from('user_profile')

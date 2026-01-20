@@ -50,6 +50,11 @@ serve(async (req) => {
       return jsonErr('1100', 'Cannot send invitation to yourself', 400);
     }
 
+    /**
+     * @typedef {Object} UserProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     */
+    /** @type {{ data: UserProfileRow | null, error: any }} */
     // 檢查目標使用者是否存在
     const { data: targetProfile, error: profileError } = await supabase
       .from('user_profile')
@@ -67,6 +72,14 @@ serve(async (req) => {
     const userId1 = currentUserId;
     const userId2 = target_user_id;
 
+    /**
+     * @typedef {Object} FriendshipRow
+     * @property {number} id - 關係記錄 ID (friendships.id)
+     * @property {string} status - 關係狀態 (friendships.status: 'pending' | 'friend' | 'blocked')
+     * @property {string} user_one_id - 使用者一 UUID (friendships.user_one_id)
+     * @property {string} user_two_id - 使用者二 UUID (friendships.user_two_id)
+     */
+    /** @type {{ data: FriendshipRow | null, error: any }} */
     const { data: existingFriendship, error: friendshipError } = await supabase
       .from('friendships')
       .select('id, status, user_one_id, user_two_id')
@@ -139,6 +152,14 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    /**
+     * @typedef {Object} UserProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     * @property {string|null} name - 使用者名稱 (user_profile.name)
+     * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+     * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+     */
+    /** @type {{ data: UserProfileRow | null, error: any }} */
     const { data: senderProfile } = await serviceClient
       .from('user_profile')
       .select('uid, name, custom_user_id, image_url')

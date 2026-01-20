@@ -43,6 +43,15 @@ serve(async (req) => {
       return jsonErr('1100', 'room_id is required (string|number)', 400);
     }
 
+    /**
+     * @typedef {Object} ChatMessageRow
+     * @property {number} id - 訊息 ID (chat_messages.id)
+     * @property {number} channel_id - 頻道 ID (chat_messages.channel_id)
+     * @property {string} uid - 發送者 UUID (chat_messages.uid)
+     * @property {string} message_content - 訊息內容 (chat_messages.message_content)
+     * @property {number} created_at - 建立時間戳（毫秒）(chat_messages.created_at)
+     */
+    /** @type {{ data: ChatMessageRow[] | null, error: any }} */
     let q = supabase
       .from('chat_messages')
       .select('id, channel_id, uid, message_content, created_at')
@@ -69,6 +78,14 @@ serve(async (req) => {
       return jsonOk({ messages: [], cursor: null });
     }
 
+    /**
+     * @typedef {Object} UserProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     * @property {string|null} name - 使用者名稱 (user_profile.name)
+     * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+     * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+     */
+    /** @type {{ data: UserProfileRow[] | null, error: any }} */
     // Fetch sender profiles for display
     const senderUids = Array.from(new Set(messagesRaw.map((m) => m.uid).filter(Boolean)));
     const { data: profiles, error: profError } = await supabase

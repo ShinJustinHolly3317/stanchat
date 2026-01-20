@@ -39,6 +39,14 @@ serve(async (req) => {
 
     const now = Date.now();
 
+    /**
+     * @typedef {Object} UserProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     * @property {string|null} name - 使用者名稱 (user_profile.name)
+     * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+     * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+     */
+    /** @type {{ data: UserProfileRow | null, error: any }} */
     // Load user profile
     const { data: profile, error: profileError } = await supabase
       .from('user_profile')
@@ -56,6 +64,11 @@ serve(async (req) => {
       avatar_url: profile?.image_url || null,
     };
 
+    /**
+     * @typedef {Object} ChannelUserRow
+     * @property {number} channel_id - 頻道 ID (channel_users.channel_id)
+     */
+    /** @type {{ data: ChannelUserRow[] | null, error: any }} */
     // Load channels for current user
     const { data: channelRows, error: channelUsersError } = await supabase
       .from('channel_users')
@@ -76,6 +89,12 @@ serve(async (req) => {
       });
     }
 
+    /**
+     * @typedef {Object} ChatChannelRow
+     * @property {number} id - 頻道 ID (chat_channels.id)
+     * @property {string} channel_type - 頻道類型 (chat_channels.channel_type)
+     */
+    /** @type {{ data: ChatChannelRow[] | null, error: any }} */
     const { data: channels, error: channelsError } = await supabase
       .from('chat_channels')
       .select('id, channel_type')
@@ -85,6 +104,15 @@ serve(async (req) => {
       return jsonErr('9000', `Failed to fetch channel info: ${channelsError.message}`, 500);
     }
 
+    /**
+     * @typedef {Object} ChatMessageRow
+     * @property {number} id - 訊息 ID (chat_messages.id)
+     * @property {number} channel_id - 頻道 ID (chat_messages.channel_id)
+     * @property {string} uid - 發送者 UUID (chat_messages.uid)
+     * @property {string} message_content - 訊息內容 (chat_messages.message_content)
+     * @property {number} created_at - 建立時間戳（毫秒）(chat_messages.created_at)
+     */
+    /** @type {{ data: ChatMessageRow[] | null, error: any }} */
     // Latest messages by channel
     const { data: latestMessages, error: latestError } = await supabase
       .from('chat_messages')
@@ -104,6 +132,12 @@ serve(async (req) => {
       }
     });
 
+    /**
+     * @typedef {Object} ChannelUserMemberRow
+     * @property {number} channel_id - 頻道 ID (channel_users.channel_id)
+     * @property {string} uid - 使用者 UUID (channel_users.uid)
+     */
+    /** @type {{ data: ChannelUserMemberRow[] | null, error: any }} */
     // Load channel members for room names (direct)
     const { data: channelUsers, error: channelUsersListError } = await supabase
       .from('channel_users')
@@ -119,6 +153,14 @@ serve(async (req) => {
     }
 
     const memberIds = Array.from(new Set((channelUsers || []).map((cu) => cu.uid)));
+    /**
+     * @typedef {Object} MemberProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     * @property {string|null} name - 使用者名稱 (user_profile.name)
+     * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+     * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+     */
+    /** @type {{ data: MemberProfileRow[] | null, error: any }} */
     const { data: memberProfiles, error: memberProfilesError } = await supabase
       .from('user_profile')
       .select('uid, name, custom_user_id, image_url')

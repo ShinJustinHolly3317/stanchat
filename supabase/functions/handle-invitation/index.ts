@@ -52,6 +52,14 @@ serve(async (req) => {
     // 查詢邀請記錄 (request_id = friendships.id)
     const friendshipId = request_id;
 
+    /**
+     * @typedef {Object} FriendshipRow
+     * @property {number} id - 關係記錄 ID (friendships.id)
+     * @property {string} status - 關係狀態 (friendships.status: 'pending' | 'friend' | 'blocked')
+     * @property {string} user_one_id - 使用者一 UUID (friendships.user_one_id)
+     * @property {string} user_two_id - 使用者二 UUID (friendships.user_two_id)
+     */
+    /** @type {{ data: FriendshipRow | null, error: any }} */
     const { data: friendship, error: friendshipError } = await supabase
       .from('friendships')
       .select('id, status, user_one_id, user_two_id')
@@ -94,6 +102,12 @@ serve(async (req) => {
         targetUserId,
       });
 
+      /**
+       * @typedef {Object} VerifyFriendshipRow
+       * @property {number} id - 關係記錄 ID (friendships.id)
+       * @property {string} status - 關係狀態 (friendships.status)
+       */
+      /** @type {{ data: VerifyFriendshipRow | null, error: any }} */
       // 先確認記錄仍然存在且狀態為 pending
       const { data: verifyFriendship, error: verifyError } = await supabase
         .from('friendships')
@@ -112,6 +126,16 @@ serve(async (req) => {
         return jsonErr('1404', 'Invitation not found or already processed', 404);
       }
 
+      /**
+       * @typedef {Object} UpdatedFriendshipRow
+       * @property {number} id - 關係記錄 ID (friendships.id)
+       * @property {string} status - 關係狀態 (friendships.status)
+       * @property {string} user_one_id - 使用者一 UUID (friendships.user_one_id)
+       * @property {string} user_two_id - 使用者二 UUID (friendships.user_two_id)
+       * @property {number} created_at - 建立時間戳（毫秒）(friendships.created_at)
+       * @property {number} updated_at - 更新時間戳（毫秒）(friendships.updated_at)
+       */
+      /** @type {{ data: UpdatedFriendshipRow | null, error: any }} */
       // 執行更新 - 使用 anon key (RLS 政策已更新)
       const { data: updatedFriendship, error: updateError } = await supabase
         .from('friendships')
@@ -143,6 +167,11 @@ serve(async (req) => {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+      /**
+       * @typedef {Object} ChatChannelRow
+       * @property {number} id - 頻道 ID (chat_channels.id)
+       */
+      /** @type {{ data: ChatChannelRow | null, error: any }} */
       // 建立 direct message channel
       const { data: channel, error: channelError } = await serviceClient
         .from('chat_channels')
@@ -153,7 +182,7 @@ serve(async (req) => {
         .single();
 
       if (!channelError && channel) {
-        roomId = channel.id.toString();
+        roomId = channel.id;
 
         // 將兩個使用者加入 channel
         await serviceClient.from('channel_users').insert([
@@ -161,6 +190,14 @@ serve(async (req) => {
           { channel_id: channel.id, uid: targetUserId },
         ]);
 
+        /**
+         * @typedef {Object} UserProfileRow
+         * @property {string} uid - 使用者 UUID (user_profile.uid)
+         * @property {string|null} name - 使用者名稱 (user_profile.name)
+         * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+         * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+         */
+        /** @type {{ data: UserProfileRow | null, error: any }} */
         // 發送通知給發送邀請的使用者
         const { data: currentProfile } = await serviceClient
           .from('user_profile')
@@ -195,6 +232,14 @@ serve(async (req) => {
         return jsonErr('9000', 'Failed to decline invitation', 500);
       }
 
+      /**
+       * @typedef {Object} UserProfileRow
+       * @property {string} uid - 使用者 UUID (user_profile.uid)
+       * @property {string|null} name - 使用者名稱 (user_profile.name)
+       * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+       * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+       */
+      /** @type {{ data: UserProfileRow | null, error: any }} */
       // 發送通知給發送邀請的使用者
       // 使用 service role key 來發送 Realtime 通知
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

@@ -41,6 +41,11 @@ serve(async (req) => {
 
     const now = Date.now();
 
+    /**
+     * @typedef {Object} UpdatedProfileRow
+     * @property {string} uid - 使用者 UUID (user_profile.uid)
+     */
+    /** @type {{ data: UpdatedProfileRow | null, error: any }} */
     // Update profile; if missing, create it (best effort)
     const { data: updated, error: updateError } = await supabase
       .from('user_profile')
