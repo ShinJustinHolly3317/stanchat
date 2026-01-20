@@ -16,10 +16,6 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  if (req.method !== 'POST') {
-    return jsonErr('1003', 'Method not allowed', 405);
-  }
-
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
