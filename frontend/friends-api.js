@@ -277,6 +277,33 @@ class FriendsAPI {
     return await this.parseEnvelope(response);
   }
 
+  /**
+   * 標記訊息為已讀
+   * @param {number|string} channelId - 頻道 ID
+   * @param {number[]} messageIds - 可選的訊息 ID 陣列，如果省略則標記頻道中所有訊息為已讀
+   */
+  async markMessagesRead(channelId, messageIds) {
+    const token = await this.getAuthToken();
+
+    const body = {
+      channel_id: channelId,
+      ...(messageIds && Array.isArray(messageIds) && messageIds.length > 0
+        ? { message_ids: messageIds }
+        : {}),
+    };
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/mark-read`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    return await this.parseEnvelope(response);
+  }
+
   /** @deprecated duplicated; kept for backward compatibility during refactor */
   async createPendingMessage_duplicated(roomId, content) {
     return await this.createPendingMessage(roomId, content);

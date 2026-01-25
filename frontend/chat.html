@@ -136,6 +136,17 @@
       color: rgba(255, 255, 255, 0.8);
     }
     
+    .message-read-count {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 3px;
+      font-style: italic;
+    }
+    
+    .message:not(.sent) .message-read-count {
+      display: none;
+    }
+    
     .pending-indicator {
       display: inline-block;
       padding: 4px 8px;
@@ -471,7 +482,7 @@
     }
     
     // 新增訊息到畫面
-    function addMessage(content, isSent = true, isPending = false, messageId = null, timestamp = null) {
+    function addMessage(content, isSent = true, isPending = false, messageId = null, timestamp = null, readCount = null) {
       const emptyState = messagesArea.querySelector('.empty-state');
       if (emptyState) {
         emptyState.remove();
@@ -514,6 +525,14 @@
       timeDiv.textContent = dateObj.toLocaleTimeString();
       contentDiv.appendChild(timeDiv);
       
+      // 顯示已讀數量（僅限自己發送的訊息）
+      if (isSent && readCount !== null && readCount !== undefined) {
+        const readCountDiv = document.createElement('div');
+        readCountDiv.className = 'message-read-count';
+        readCountDiv.textContent = `✓ Read by ${readCount}`;
+        contentDiv.appendChild(readCountDiv);
+      }
+      
       messageDiv.appendChild(avatar);
       messageDiv.appendChild(contentDiv);
       messagesArea.appendChild(messageDiv);
@@ -521,7 +540,7 @@
     }
 
     // 將訊息插入到頂部（載入舊訊息用）
-    function prependMessage(content, isSent, messageId, timestamp = null) {
+    function prependMessage(content, isSent, messageId, timestamp = null, readCount = null) {
       const emptyState = messagesArea.querySelector('.empty-state');
       if (emptyState) {
         emptyState.remove();
@@ -556,6 +575,14 @@
       timeDiv.textContent = dateObj.toLocaleTimeString();
       contentDiv.appendChild(timeDiv);
 
+      // 顯示已讀數量（僅限自己發送的訊息）
+      if (isSent && readCount !== null && readCount !== undefined) {
+        const readCountDiv = document.createElement('div');
+        readCountDiv.className = 'message-read-count';
+        readCountDiv.textContent = `✓ Read by ${readCount}`;
+        contentDiv.appendChild(readCountDiv);
+      }
+
       messageDiv.appendChild(avatar);
       messageDiv.appendChild(contentDiv);
 
@@ -571,10 +598,20 @@
         const ordered = [...msgs].reverse();
         ordered.forEach((m) => {
           const isSent = m.sender?.id && currentUserId ? String(m.sender.id) === String(currentUserId) : false;
-          addMessage(m.content || '', isSent, false, m.id, m.created_at);
+          addMessage(m.content || '', isSent, false, m.id, m.created_at, m.read_count);
         });
         historyCursor = res.cursor ?? null;
         hasMoreHistory = Boolean(historyCursor);
+        
+        // 標記所有載入的訊息為已讀
+        if (msgs.length > 0) {
+          const messageIds = msgs.map((m) => m.id);
+          try {
+            await FriendsAPI.markMessagesRead(roomId, messageIds);
+          } catch (e) {
+            console.warn('Failed to mark messages as read:', e);
+          }
+        }
       } catch (e) {
         showError(e.message || e);
       } finally {
@@ -602,7 +639,7 @@
         const ordered = [...msgs].reverse();
         ordered.forEach((m) => {
           const isSent = m.sender?.id && currentUserId ? String(m.sender.id) === String(currentUserId) : false;
-          prependMessage(m.content || '', isSent, m.id, m.created_at);
+          prependMessage(m.content || '', isSent, m.id, m.created_at, m.read_count);
         });
 
         historyCursor = res.cursor ?? null;
@@ -646,7 +683,15 @@
             if (!content) return;
 
             const isSent = msgUid && currentUserId ? String(msgUid) === String(currentUserId) : false;
-            addMessage(content, isSent, false, msgId, row.created_at);
+            // 新訊息預設 read_count 為 0（尚未有人讀過）
+            addMessage(content, isSent, false, msgId, row.created_at, 0);
+            
+            // 如果使用者正在查看頻道，立即標記為已讀
+            if (!isSent && msgId) {
+              FriendsAPI.markMessagesRead(roomId, [msgId]).catch((e) => {
+                console.warn('Failed to mark new message as read:', e);
+              });
+            }
           }
         )
         .subscribe((status) => {

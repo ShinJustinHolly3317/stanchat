@@ -78,6 +78,24 @@ serve(async (req) => {
       return jsonOk({ messages: [], cursor: null });
     }
 
+    // 取得頻道類型以判斷是否為一對一聊天
+    /**
+     * @typedef {Object} ChatChannelRow
+     * @property {string} channel_type - 頻道類型 (chat_channels.channel_type)
+     */
+    /** @type {{ data: ChatChannelRow | null, error: any }} */
+    const { data: channel, error: channelError } = await supabase
+      .from('chat_channels')
+      .select('channel_type')
+      .eq('id', roomId)
+      .maybeSingle();
+
+    if (channelError) {
+      return jsonErr('9000', `Failed to fetch channel info: ${channelError.message}`, 500);
+    }
+
+    const isDirectChat = channel?.channel_type === 'direct' || channel?.channel_type === 'personal';
+
     /**
      * @typedef {Object} UserProfileRow
      * @property {string} uid - 使用者 UUID (user_profile.uid)
@@ -100,8 +118,35 @@ serve(async (req) => {
     const profileMap = new Map();
     (profiles || []).forEach((p) => profileMap.set(p.uid, p));
 
+    // 取得所有訊息的已讀數量
+    const messageIds = messagesRaw.map((m) => m.id);
+    /**
+     * @typedef {Object} MessageReadRow
+     * @property {number} message_id - 訊息 ID (message_reads.message_id)
+     */
+     /** @type {{ data: MessageReadRow[] | null, error: any }} */
+    const { data: reads, error: readsError } = await supabase
+      .from('message_reads')
+      .select('message_id')
+      .in('message_id', messageIds);
+
+    if (readsError) {
+      return jsonErr('9000', `Failed to fetch read counts: ${readsError.message}`, 500);
+    }
+
+    // 計算每個訊息的已讀數量
+    const readCountMap = new Map<number, number>();
+    (reads || []).forEach((r) => {
+      const count = readCountMap.get(r.message_id) || 0;
+      readCountMap.set(r.message_id, count + 1);
+    });
+
     const messages = messagesRaw.map((m) => {
       const p = profileMap.get(m.uid);
+      // 對於一對一聊天，已讀數量固定為 1（對方）
+      // 對於群組聊天，顯示實際已讀數量
+      const readCount = isDirectChat ? 1 : (readCountMap.get(m.id) || 0);
+      
       return {
         id: m.id,
         sender: {
@@ -112,6 +157,7 @@ serve(async (req) => {
         content: m.message_content || '',
         msg_type: 'text',
         created_at: m.created_at,
+        read_count: readCount,
       };
     });
 

@@ -89,12 +89,6 @@
       border-color: #667eea;
     }
     
-    .channel-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 15px;
-    }
     
     .channel-icon {
       width: 50px;
@@ -242,6 +236,31 @@
     .error.show {
       display: block;
     }
+    
+    .unread-badge {
+      display: inline-block;
+      background: #ff4444;
+      color: white;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      min-width: 20px;
+      text-align: center;
+      margin-left: auto;
+    }
+    
+    .unread-badge.hidden {
+      display: none;
+    }
+    
+    .channel-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+      justify-content: space-between;
+    }
   </style>
 </head>
 <body>
@@ -317,13 +336,21 @@
       const lastText = lastMessage?.message_content ? lastMessage.message_content : 'No messages yet';
       const lastTime = lastMessage?.created_at ? new Date(lastMessage.created_at).toLocaleString() : '';
       
+      const unreadCount = channel.unread_count || 0;
+      const unreadBadge = unreadCount > 0 
+        ? `<span class="unread-badge">${unreadCount}</span>`
+        : `<span class="unread-badge hidden">0</span>`;
+      
       channelItem.innerHTML = `
         <div class="channel-header">
-          <div class="channel-icon">${getChannelIcon(channel.channel_type)}</div>
-          <div class="channel-info">
-            <h3>Channel #${channel.id}</h3>
-            <span class="channel-type-badge type-${channel.channel_type}">${getChannelTypeText(channel.channel_type)}</span>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <div class="channel-icon">${getChannelIcon(channel.channel_type)}</div>
+            <div class="channel-info">
+              <h3>Channel #${channel.id}</h3>
+              <span class="channel-type-badge type-${channel.channel_type}">${getChannelTypeText(channel.channel_type)}</span>
+            </div>
           </div>
+          ${unreadBadge}
         </div>
         <div class="channel-last-message">
           <div class="last-message-text">${lastText}</div>
@@ -388,7 +415,7 @@
       }
     }
 
-    function updateChannelLastMessage(payload) {
+    async function updateChannelLastMessage(payload) {
       const roomId = payload?.room_id;
       if (!roomId) return;
       const card = channelCardMap.get(String(roomId));
@@ -403,6 +430,54 @@
       const timeEl = card.querySelector('.last-message-time');
       if (textEl) textEl.textContent = lastText;
       if (timeEl) timeEl.textContent = lastTime;
+      
+      // 更新未讀數量（如果有提供）
+      if (payload?.unread_count !== undefined) {
+        updateUnreadBadge(card, payload.unread_count);
+      } else {
+        // 如果沒有提供 unread_count，檢查訊息是否為當前使用者發送
+        // 如果是其他人發送的，增加未讀數量
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
+        const messageUid = payload?.last_message?.uid;
+        
+        if (currentUserId && messageUid && String(messageUid) !== String(currentUserId)) {
+          // 增加未讀數量
+          const badgeEl = card.querySelector('.unread-badge');
+          if (badgeEl) {
+            const currentCount = parseInt(badgeEl.textContent) || 0;
+            updateUnreadBadge(card, currentCount + 1);
+          } else {
+            // 如果沒有 badge，創建並顯示
+            updateUnreadBadge(card, 1);
+          }
+        }
+      }
+    }
+    
+    function updateUnreadBadge(card, count) {
+      let badgeEl = card.querySelector('.unread-badge');
+      if (!badgeEl) {
+        // 如果沒有 badge，創建一個
+        const header = card.querySelector('.channel-header');
+        if (header) {
+          badgeEl = document.createElement('span');
+          badgeEl.className = 'unread-badge';
+          header.appendChild(badgeEl);
+        }
+      }
+      
+      if (badgeEl) {
+        if (count > 0) {
+          badgeEl.textContent = count;
+          badgeEl.classList.remove('hidden');
+        } else {
+          badgeEl.textContent = '0';
+          badgeEl.classList.add('hidden');
+        }
+      }
     }
 
     async function setupInboxRealtime() {

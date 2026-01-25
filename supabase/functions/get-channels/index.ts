@@ -108,7 +108,7 @@ serve(async (req) => {
       }
     });
 
-    // 為每個頻道取得參與的使用者資訊
+    // 為每個頻道取得參與的使用者資訊和未讀數量
     const channelsWithUsers = await Promise.all(
       (channels || []).map(async (channel) => {
         /**
@@ -127,6 +127,7 @@ serve(async (req) => {
             id: channel.id,
             channel_type: channel.channel_type,
             users: [],
+            unread_count: 0,
           };
         }
 
@@ -140,7 +141,7 @@ serve(async (req) => {
         /** @type {{ data: UserProfileRow[] | null, error: any }} */
         // 取得使用者詳細資訊
         const userIds = channelUsers.map((cu) => cu.uid);
-        const { data: userProfiles, error: profilesError } = await supabase
+        const { data: userProfiles } = await supabase
           .from('user_profile')
           .select('uid, name, custom_user_id, image_url')
           .in('uid', userIds);
@@ -151,6 +152,41 @@ serve(async (req) => {
             nickname: profile.name || profile.custom_user_id || 'Unknown User',
             avatar_url: profile.image_url || null,
           })) || [];
+
+        // 計算未讀訊息數量
+        // 取得頻道中所有訊息（排除自己發送的）
+        /**
+         * @typedef {Object} ChatMessageRow
+         * @property {number} id - 訊息 ID (chat_messages.id)
+         */
+        /** @type {{ data: ChatMessageRow[] | null, error: any }} */
+        const { data: channelMessages, error: messagesError } = await supabase
+          .from('chat_messages')
+          .select('id')
+          .eq('channel_id', channel.id)
+          .neq('uid', currentUserId);
+
+        let unreadCount = 0;
+        if (!messagesError && channelMessages && channelMessages.length > 0) {
+          const messageIds = channelMessages.map((m) => m.id);
+          
+          // 取得已讀的訊息 ID
+          /**
+           * @typedef {Object} MessageReadRow
+           * @property {number} message_id - 訊息 ID (message_reads.message_id)
+           */
+          /** @type {{ data: MessageReadRow[] | null, error: any }} */
+          const { data: readMessages, error: readsError } = await supabase
+            .from('message_reads')
+            .select('message_id')
+            .eq('uid', currentUserId)
+            .in('message_id', messageIds);
+
+          if (!readsError) {
+            const readMessageIds = new Set((readMessages || []).map((r) => r.message_id));
+            unreadCount = messageIds.filter((id) => !readMessageIds.has(id)).length;
+          }
+        }
 
         return {
           id: channel.id,
@@ -164,6 +200,7 @@ serve(async (req) => {
                 created_at: latestByChannel.get(channel.id).created_at,
               }
             : null,
+          unread_count: unreadCount,
         };
       })
     );

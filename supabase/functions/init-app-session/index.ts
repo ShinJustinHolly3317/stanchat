@@ -185,37 +185,73 @@ serve(async (req) => {
       channelMembersMap.get(cu.channel_id).push(cu.uid);
     });
 
-    const rooms = (channels || []).map((ch) => {
-      const members = channelMembersMap.get(ch.id) || [];
+    // 計算每個頻道的未讀數量
+    const rooms = await Promise.all(
+      (channels || []).map(async (ch) => {
+        const members = channelMembersMap.get(ch.id) || [];
 
-      const users = members
-        .map((uid) => {
-          const p = profileMap.get(uid);
-          return {
-            id: uid,
-            nickname: p?.name || p?.custom_user_id || 'Unknown',
-            avatar_url: p?.image_url || null,
-          };
-        })
-        .filter(Boolean);
+        const users = members
+          .map((uid) => {
+            const p = profileMap.get(uid);
+            return {
+              id: uid,
+              nickname: p?.name || p?.custom_user_id || 'Unknown',
+              avatar_url: p?.image_url || null,
+            };
+          })
+          .filter(Boolean);
 
-      const last = latestByChannel.get(ch.id);
+        const last = latestByChannel.get(ch.id);
 
-      return {
-        id: ch.id,
-        channel_type: ch.channel_type,
-        users,
-        last_message: last
-          ? {
-              id: last.id,
-              uid: last.uid,
-              message_content: last.message_content,
-              created_at: last.created_at,
-            }
-          : null,
-        unread_count: 0,
-      };
-    });
+        // 計算未讀訊息數量（與 get-channels 相同的邏輯）
+        /**
+         * @typedef {Object} ChatMessageRow
+         * @property {number} id - 訊息 ID (chat_messages.id)
+         */
+        /** @type {{ data: ChatMessageRow[] | null, error: any }} */
+        const { data: channelMessages, error: messagesError } = await supabase
+          .from('chat_messages')
+          .select('id')
+          .eq('channel_id', ch.id)
+          .neq('uid', user.id);
+
+        let unreadCount = 0;
+        if (!messagesError && channelMessages && channelMessages.length > 0) {
+          const messageIds = channelMessages.map((m) => m.id);
+          
+          /**
+           * @typedef {Object} MessageReadRow
+           * @property {number} message_id - 訊息 ID (message_reads.message_id)
+           */
+          /** @type {{ data: MessageReadRow[] | null, error: any }} */
+          const { data: readMessages, error: readsError } = await supabase
+            .from('message_reads')
+            .select('message_id')
+            .eq('uid', user.id)
+            .in('message_id', messageIds);
+
+          if (!readsError) {
+            const readMessageIds = new Set((readMessages || []).map((r) => r.message_id));
+            unreadCount = messageIds.filter((id) => !readMessageIds.has(id)).length;
+          }
+        }
+
+        return {
+          id: ch.id,
+          channel_type: ch.channel_type,
+          users,
+          last_message: last
+            ? {
+                id: last.id,
+                uid: last.uid,
+                message_content: last.message_content,
+                created_at: last.created_at,
+              }
+            : null,
+          unread_count: unreadCount,
+        };
+      })
+    );
 
     return jsonOk({
       status: 'success',
