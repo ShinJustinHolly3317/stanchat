@@ -3,7 +3,7 @@
 // - Optionally supports `?uid=<uuid>` to view another user's profile (for clicking others' avatars)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.8';
 import { corsHeaders } from '../_shared/cors.ts';
 import { jsonErr, jsonOk } from '../_shared/responses.ts';
 
