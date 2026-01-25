@@ -333,8 +333,8 @@
     window.handleAccept = async (requestId) => {
       try {
         const result = await FriendsAPI.acceptInvitation(requestId, 'accept');
-        if (result.room_id) {
-          alert(`Friend request accepted! Room ID: ${result.room_id}`);
+        if (result.channel_id) {
+          alert(`Friend request accepted! Channel ID: ${result.channel_id}`);
         } else {
           alert('Friend request accepted!');
         }

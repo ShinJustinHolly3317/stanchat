@@ -366,12 +366,12 @@
     
     const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
     
-    // 從 URL 取得 room_id
+    // 從 URL 取得 channel_id
     const urlParams = new URLSearchParams(window.location.search);
-    const roomId = urlParams.get('room_id');
+    const channelId = urlParams.get('channel_id');
     
-    if (!roomId) {
-      alert('Missing room_id parameter');
+    if (!channelId) {
+      alert('Missing channel_id parameter');
       window.location.href = 'channels.html';
     }
     
@@ -386,7 +386,7 @@
     let currentPendingId = null;
     let currentAudioPath = null;
 
-    let roomChannel = null;
+    let channelSubscription = null;
     const seenMessageIds = new Set();
     let historyCursor = null; // oldest loaded message id (for keyset pagination)
     let isLoadingHistory = false;
@@ -466,7 +466,7 @@
     async function loadChannelInfo() {
       try {
         const channels = await FriendsAPI.getChannels();
-        const channel = channels.channels?.find((c) => c.id === roomId);
+        const channel = channels.channels?.find((c) => c.id === channelId);
         
         if (channel) {
           const otherUser = channel.users?.find((u) => u.uid !== currentUserId);
@@ -592,7 +592,7 @@
     async function loadInitialMessages() {
       isLoadingHistory = true;
       try {
-        const res = await FriendsAPI.getMessages(roomId);
+        const res = await FriendsAPI.getMessages(channelId);
         const msgs = res.messages || [];
         // msgs are newest -> older; render oldest first so UI scrolls naturally
         const ordered = [...msgs].reverse();
@@ -607,7 +607,7 @@
         if (msgs.length > 0) {
           const messageIds = msgs.map((m) => m.id);
           try {
-            await FriendsAPI.markMessagesRead(roomId, messageIds);
+            await FriendsAPI.markMessagesRead(channelId, messageIds);
           } catch (e) {
             console.warn('Failed to mark messages as read:', e);
           }
@@ -627,7 +627,7 @@
       const prevScrollHeight = messagesArea.scrollHeight;
 
       try {
-        const res = await FriendsAPI.getMessages(roomId, historyCursor);
+        const res = await FriendsAPI.getMessages(channelId, historyCursor);
         const msgs = res.messages || [];
         if (msgs.length === 0) {
           hasMoreHistory = false;
@@ -655,15 +655,15 @@
       }
     }
 
-    function setupRoomRealtime(channelId) {
+    function setupChannelRealtime(channelId) {
       // Clean up previous subscription (if any)
-      if (roomChannel) {
-        supabase.removeChannel(roomChannel);
-        roomChannel = null;
+      if (channelSubscription) {
+        supabase.removeChannel(channelSubscription);
+        channelSubscription = null;
       }
 
-      roomChannel = supabase
-        .channel(`room:${channelId}`)
+      channelSubscription = supabase
+        .channel(`channel:${channelId}`)
         .on(
           'postgres_changes',
           {
@@ -673,7 +673,7 @@
             filter: `channel_id=eq.${channelId}`,
           },
           (payload) => {
-            console.log('room chat mesage payload', payload)
+            console.log('channel chat message payload', payload)
             const row = payload.new || payload.record || {};
             const msgId = row.id ?? null;
             const msgUid = row.uid ?? null;
@@ -688,14 +688,14 @@
             
             // 如果使用者正在查看頻道，立即標記為已讀
             if (!isSent && msgId) {
-              FriendsAPI.markMessagesRead(roomId, [msgId]).catch((e) => {
+              FriendsAPI.markMessagesRead(channelId, [msgId]).catch((e) => {
                 console.warn('Failed to mark new message as read:', e);
               });
             }
           }
         )
         .subscribe((status) => {
-          console.log('room realtime status:', status);
+          console.log('channel realtime status:', status);
         });
     }
     
@@ -880,7 +880,7 @@
       
       try {
         // 呼叫 edge function
-        const result = await FriendsAPI.createPendingMessage(roomId, content);
+        const result = await FriendsAPI.createPendingMessage(channelId, content);
         
         // 移除 loading 狀態
         sendBtn.disabled = false;
@@ -934,7 +934,7 @@
       if (authenticated) {
         await loadChannelInfo();
         await loadInitialMessages();
-        setupRoomRealtime(roomId);
+        setupChannelRealtime(channelId);
 
         messagesArea.addEventListener('scroll', () => {
           loadMoreHistoryIfNeeded();
@@ -944,8 +944,8 @@
 
     // Cleanup when leaving page
     window.addEventListener('beforeunload', async () => {
-      if (roomChannel) {
-        await supabase.removeChannel(roomChannel);
+      if (channelSubscription) {
+        await supabase.removeChannel(channelSubscription);
       }
     });
   </script>

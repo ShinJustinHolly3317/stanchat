@@ -88,7 +88,7 @@ serve(async (req) => {
     }
 
     const now = Date.now();
-    let roomId = null;
+    let channelId = null;
     const targetUserId = friendship.user_one_id;
 
     if (action === 'accept') {
@@ -182,7 +182,7 @@ serve(async (req) => {
         .single();
 
       if (!channelError && channel) {
-        roomId = channel.id;
+        channelId = channel.id;
 
         // 將兩個使用者加入 channel
         await serviceClient.from('channel_users').insert([
@@ -216,7 +216,7 @@ serve(async (req) => {
               avatar_url: currentProfile?.image_url || null,
             },
             sent_at: now,
-            room_id: roomId,
+            channel_id: channelId,
           },
         });
       }
@@ -267,10 +267,10 @@ serve(async (req) => {
     }
 
     return jsonOk(
-      roomId
+      channelId
         ? {
             status: 'success',
-            room_id: roomId,
+            channel_id: channelId,
           }
         : { status: 'success' }
     );

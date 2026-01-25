@@ -1,5 +1,5 @@
 // init-app-session Edge Function
-// - First version: return user_profile + rooms snapshot
+// - First version: return user_profile + channels snapshot
 // - Uses standard {code,data} envelope
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -85,7 +85,7 @@ serve(async (req) => {
         status: 'success',
         timestamp: now,
         user_profile: userProfile,
-        rooms: [],
+        channels: [],
       });
     }
 
@@ -138,7 +138,7 @@ serve(async (req) => {
      * @property {string} uid - 使用者 UUID (channel_users.uid)
      */
     /** @type {{ data: ChannelUserMemberRow[] | null, error: any }} */
-    // Load channel members for room names (direct)
+    // Load channel members for channel names (direct)
     const { data: channelUsers, error: channelUsersListError } = await supabase
       .from('channel_users')
       .select('channel_id, uid')
@@ -186,7 +186,7 @@ serve(async (req) => {
     });
 
     // 計算每個頻道的未讀數量
-    const rooms = await Promise.all(
+    const channels = await Promise.all(
       (channels || []).map(async (ch) => {
         const members = channelMembersMap.get(ch.id) || [];
 
@@ -257,7 +257,7 @@ serve(async (req) => {
       status: 'success',
       timestamp: now,
       user_profile: userProfile,
-      rooms,
+      channels,
     });
   } catch (error) {
     return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);

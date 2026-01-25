@@ -36,11 +36,11 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const roomId = body?.room_id;
+    const channelId = body?.channel_id;
     const cursor = body?.cursor; // last message id (number) from previous page
 
-    if (!roomId || (typeof roomId !== 'string' && typeof roomId !== 'number')) {
-      return jsonErr('1100', 'room_id is required (string|number)', 400);
+    if (!channelId || (typeof channelId !== 'string' && typeof channelId !== 'number')) {
+      return jsonErr('1100', 'channel_id is required (string|number)', 400);
     }
 
     /**
@@ -55,7 +55,7 @@ serve(async (req) => {
     let q = supabase
       .from('chat_messages')
       .select('id, channel_id, uid, message_content, created_at')
-      .eq('channel_id', roomId)
+      .eq('channel_id', channelId)
       .order('id', { ascending: false })
       .limit(PAGE_SIZE);
 
@@ -87,7 +87,7 @@ serve(async (req) => {
     const { data: channel, error: channelError } = await supabase
       .from('chat_channels')
       .select('channel_type')
-      .eq('id', roomId)
+      .eq('id', channelId)
       .maybeSingle();
 
     if (channelError) {

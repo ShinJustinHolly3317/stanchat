@@ -405,8 +405,8 @@
     async function handleAcceptInvitation(senderUserId, action) {
       try {
         const result = await FriendsAPI.acceptInvitation(senderUserId, action);
-        if (action === 'accept' && result.room_id) {
-          alert(`Friend request accepted! Room ID: ${result.room_id}`);
+        if (action === 'accept' && result.channel_id) {
+          alert(`Friend request accepted! Channel ID: ${result.channel_id}`);
         } else {
           alert(`Friend request ${action === 'accept' ? 'accepted' : 'declined'}`);
         }

@@ -38,11 +38,11 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const roomId = body?.room_id;
+    const channelId = body?.channel_id;
     const content = body?.content;
 
-    if (!roomId || typeof roomId !== 'string') {
-      return jsonErr('1100', 'room_id is required (string)', 400);
+    if (!channelId || typeof channelId !== 'string') {
+      return jsonErr('1100', 'channel_id is required (string)', 400);
     }
 
     if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -86,7 +86,7 @@ serve(async (req) => {
     const { data: pending, error: pendingError } = await supabase
       .from('pending_messages')
       .insert({
-        channel_id: roomId,
+        channel_id: channelId,
         sender_uid: user.id,
         content: content,
         status: 'waiting_answer',

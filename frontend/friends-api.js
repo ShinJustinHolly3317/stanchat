@@ -210,7 +210,7 @@ class FriendsAPI {
   /**
    * 建立 pending message 並取得問題
    */
-  async createPendingMessage(roomId, content) {
+  async createPendingMessage(channelId, content) {
     const token = await this.getAuthToken();
 
     const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/start-new-message`, {
@@ -220,7 +220,7 @@ class FriendsAPI {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        room_id: roomId,
+        channel_id: channelId,
         content: content,
       }),
     });
@@ -257,11 +257,11 @@ class FriendsAPI {
    * 取得聊天室訊息（分頁，newest -> older）
    * cursor: 上一頁最後一筆訊息 id（keyset）
    */
-  async getMessages(roomId, cursor) {
+  async getMessages(channelId, cursor) {
     const token = await this.getAuthToken();
 
     const body = {
-      room_id: roomId,
+      channel_id: channelId,
       ...(cursor !== undefined && cursor !== null ? { cursor } : {}),
     };
 
@@ -305,8 +305,8 @@ class FriendsAPI {
   }
 
   /** @deprecated duplicated; kept for backward compatibility during refactor */
-  async createPendingMessage_duplicated(roomId, content) {
-    return await this.createPendingMessage(roomId, content);
+  async createPendingMessage_duplicated(channelId, content) {
+    return await this.createPendingMessage(channelId, content);
   }
 
   // (removed duplicate createPendingMessage implementation; use the envelope version above)

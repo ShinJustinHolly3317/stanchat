@@ -315,7 +315,7 @@
       const channelItem = document.createElement('div');
       channelItem.className = 'channel-item';
       channelItem.onclick = () => {
-        window.location.href = `chat.html?room_id=${channel.id}`;
+        window.location.href = `chat.html?channel_id=${channel.id}`;
       };
       
       const usersList = channel.users
@@ -416,9 +416,9 @@
     }
 
     async function updateChannelLastMessage(payload) {
-      const roomId = payload?.room_id;
-      if (!roomId) return;
-      const card = channelCardMap.get(String(roomId));
+      const channelId = payload?.channel_id;
+      if (!channelId) return;
+      const card = channelCardMap.get(String(channelId));
       if (!card) return;
 
       const lastText = payload?.last_message?.text || 'No messages yet';

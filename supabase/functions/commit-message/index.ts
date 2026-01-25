@@ -135,7 +135,7 @@ serve(async (req) => {
 
       if (!membersError && members) {
         const payload = {
-          room_id: pending.channel_id,
+          channel_id: pending.channel_id,
           last_message: {
             text: inserted?.message_content ?? pending.content,
             created_at: inserted?.created_at ?? now,
