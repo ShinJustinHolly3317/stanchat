@@ -17,3 +17,7 @@ declare module 'https://esm.sh/@supabase/supabase-js@2' {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export function createClient(...args: any[]): any;
 }
+
+declare module 'npm:@supabase/supabase-js@2.49.8' {
+  export function createClient(...args: any[]): any;
+}
