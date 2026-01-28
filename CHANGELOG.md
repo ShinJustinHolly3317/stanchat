@@ -4,6 +4,61 @@
 
 ### Changed - 2026-01-25
 
+#### commit-message: 更新 broadcast payload schema
+
+**變更內容：**
+
+更新 `commit-message` Edge Function 的 Realtime broadcast payload，使其與 `get-channels` 返回的 channel schema 完全一致。
+
+**變更前：**
+```typescript
+{
+  channel_id: number,
+  last_message: {
+    text: string,
+    created_at: number
+  },
+  unread_total: number
+}
+```
+
+**變更後：**
+```typescript
+{
+  id: number,
+  channel_type: string,
+  users: Array<{
+    id: string,
+    nickname: string,
+    avatar_url: string | null
+  }>,
+  last_message: {
+    id: number,
+    uid: string,
+    message_content: string,
+    created_at: number
+  } | null,
+  unread_count: number
+}
+```
+
+**影響：**
+
+- Broadcast 事件 `channel_lst_msg_update` 現在包含完整的頻道資訊
+- 前端可以直接使用與 `get-channels` 相同的處理邏輯
+- 欄位名稱統一：`text` → `message_content`，`unread_total` → `unread_count`
+
+**實作細節：**
+
+- 查詢頻道資訊（`chat_channels` 表）取得 `id` 和 `channel_type`
+- 查詢頻道成員（`channel_users` 表）
+- 查詢使用者詳細資訊（`user_profile` 表）取得 nickname 和 avatar_url
+- 組合成與 `get-channels` 一致的完整 channel 物件
+
+---
+
+### Changed - 2026-01-25
+
 #### 統一命名：將 `room` 相關命名改為 `channel`
 
 為了保持程式碼命名的一致性，將所有 Edge Functions 中的 `room` 相關命名統一改為 `channel`。
