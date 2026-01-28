@@ -123,36 +123,87 @@ serve(async (req) => {
     try {
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+      /**
+       * @typedef {Object} ChatChannelRow
+       * @property {number} id - 頻道 ID (chat_channels.id)
+       * @property {string} channel_type - 頻道類型 (chat_channels.channel_type)
+       */
+      /** @type {{ data: ChatChannelRow | null, error: any }} */
+      // 取得頻道資訊
+      const { data: channel, error: channelError } = await serviceClient
+        .from('chat_channels')
+        .select('id, channel_type')
+        .eq('id', pending.channel_id)
+        .maybeSingle();
+
+      if (channelError || !channel) {
+        console.warn('Failed to fetch channel info for broadcast:', channelError);
+        return;
+      }
+
       /**
        * @typedef {Object} ChannelUserRow
        * @property {string} uid - 使用者 UUID (channel_users.uid)
        */
       /** @type {{ data: ChannelUserRow[] | null, error: any }} */
-      const { data: members, error: membersError } = await serviceClient
+      // 取得頻道中的所有使用者
+      const { data: channelUsers, error: usersError } = await serviceClient
         .from('channel_users')
         .select('uid')
         .eq('channel_id', pending.channel_id);
 
-      if (!membersError && members) {
-        const payload = {
-          channel_id: pending.channel_id,
-          last_message: {
-            text: inserted?.message_content ?? pending.content,
-            created_at: inserted?.created_at ?? now,
-          },
-          unread_total: 0,
-        };
-
-        await Promise.all(
-          members.map((m) =>
-            serviceClient.channel(`inbox:${m.uid}`).send({
-              type: 'broadcast',
-              event: 'channel_lst_msg_update',
-              payload,
-            })
-          )
-        );
+      if (usersError || !channelUsers) {
+        console.warn('Failed to fetch channel users for broadcast:', usersError);
+        return;
       }
+
+      /**
+       * @typedef {Object} UserProfileRow
+       * @property {string} uid - 使用者 UUID (user_profile.uid)
+       * @property {string|null} name - 使用者名稱 (user_profile.name)
+       * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+       * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+       */
+      /** @type {{ data: UserProfileRow[] | null, error: any }} */
+      // 取得使用者詳細資訊
+      const userIds = channelUsers.map((cu) => cu.uid);
+      const { data: userProfiles } = await serviceClient
+        .from('user_profile')
+        .select('uid, name, custom_user_id, image_url')
+        .in('uid', userIds);
+
+      const users =
+        userProfiles?.map((profile) => ({
+          id: profile.uid,
+          nickname: profile.name || profile.custom_user_id || 'Unknown User',
+          avatar_url: profile.image_url || null,
+        })) || [];
+
+      const payload = {
+        id: channel.id,
+        channel_type: channel.channel_type,
+        users: users,
+        last_message: inserted
+          ? {
+              id: inserted.id,
+              uid: inserted.uid,
+              message_content: inserted.message_content,
+              created_at: inserted.created_at,
+            }
+          : null,
+        unread_count: 0,
+      };
+
+      await Promise.all(
+        channelUsers.map((m) =>
+          serviceClient.channel(`inbox:${m.uid}`).send({
+            type: 'broadcast',
+            event: 'channel_lst_msg_update',
+            payload,
+          })
+        )
+      );
     } catch (broadcastError) {
       console.warn('Failed to broadcast channel last message:', broadcastError);
     }
