@@ -41,8 +41,29 @@ async function checkAuth() {
     window.location.href = `profile.html`;
   });
 
+  // 呼叫 init-app-session，僅 log 結果
+  callInitAppSession(session.access_token);
+
   // 設定 Realtime 監聽
   setupRealtime(user.id);
+}
+
+// 呼叫 init-app-session Edge Function，結果只打 log
+async function callInitAppSession(accessToken) {
+  try {
+    const res = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/init-app-session`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+    const json = await res.json();
+    console.log('init-app-session result:', json);
+  } catch (e) {
+    console.error('init-app-session error:', e);
+  }
 }
 
 // 設定 Realtime 監聽

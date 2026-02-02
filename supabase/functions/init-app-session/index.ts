@@ -95,7 +95,7 @@ serve(async (req) => {
      * @property {string} channel_type - 頻道類型 (chat_channels.channel_type)
      */
     /** @type {{ data: ChatChannelRow[] | null, error: any }} */
-    const { data: channels, error: channelsError } = await supabase
+    const { data: chatChannelRows, error: channelsError } = await supabase
       .from('chat_channels')
       .select('id, channel_type')
       .in('id', channelIds);
@@ -187,7 +187,7 @@ serve(async (req) => {
 
     // 計算每個頻道的未讀數量
     const channels = await Promise.all(
-      (channels || []).map(async (ch) => {
+      (chatChannelRows || []).map(async (ch) => {
         const members = channelMembersMap.get(ch.id) || [];
 
         const users = members
