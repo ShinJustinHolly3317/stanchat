@@ -212,7 +212,7 @@ serve(async (req) => {
 
       await Promise.all(
         channelUsers.map((m) =>
-          serviceClient.channel(`inbox:${m.uid}`).send({
+          serviceClient.channel(`channel_lst_msg:${m.uid}`).send({
             type: 'broadcast',
             event: 'channel_lst_msg_update',
             payload,

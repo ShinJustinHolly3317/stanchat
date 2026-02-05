@@ -492,7 +492,7 @@
 
       const userId = session.user.id;
       inboxChannel = supabase
-        .channel(`inbox:${userId}`)
+        .channel(`channel_lst_msg:${userId}`)
         .on('broadcast', { event: 'channel_lst_msg_update' }, (payload) => {
           updateChannelLastMessage(payload.payload || payload);
         })
