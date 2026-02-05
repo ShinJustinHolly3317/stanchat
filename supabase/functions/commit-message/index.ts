@@ -203,6 +203,7 @@ serve(async (req) => {
           ? {
               id: inserted.id,
               uid: inserted.uid,
+              nickname: inserted.sender_name,
               message_content: inserted.message_content,
               created_at: inserted.created_at,
             }
