@@ -77,6 +77,19 @@ serve(async (req) => {
       return jsonErr('1004', 'Forbidden', 403);
     }
 
+    // 從 user_profile 取得發送者名稱
+    const { data: senderProfile, error: profileError } = await supabase
+      .from('user_profile')
+      .select('name, custom_user_id')
+      .eq('uid', pending.sender_uid)
+      .maybeSingle();
+
+    if (profileError) {
+      return jsonErr('9000', `Failed to fetch sender profile: ${profileError.message}`, 500);
+    }
+
+    const senderName = senderProfile?.name ?? senderProfile?.custom_user_id ?? 'Unknown User';
+
     /**
      * @typedef {Object} ChatMessageRow
      * @property {number} id - 訊息 ID (chat_messages.id)
@@ -96,6 +109,8 @@ serve(async (req) => {
         channel_id: pending.channel_id,
         message_content: pending.content,
         uid: pending.sender_uid,
+        sender_id: pending.sender_uid,
+        sender_name: senderName,
         created_at: now,
         updated_at: now,
         // audioPath is accepted but not persisted yet (per your requirement)
