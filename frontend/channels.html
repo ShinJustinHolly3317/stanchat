@@ -275,7 +275,10 @@
     </div>
     
     <div class="card">
-      <h2>Chat Channels</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="margin-bottom: 0;">Chat Channels</h2>
+        <a href="create-group.html" class="btn-create-group" style="display: inline-block; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Create group</a>
+      </div>
       <div class="error" id="error"></div>
       <div class="loading" id="loading">Loading channels...</div>
       <div class="channels-grid" id="channelsGrid"></div>
@@ -346,7 +349,7 @@
           <div style="display: flex; align-items: center; gap: 15px;">
             <div class="channel-icon">${getChannelIcon(channel.channel_type)}</div>
             <div class="channel-info">
-              <h3>Channel #${channel.id}</h3>
+              <h3>${channel.channel_type === 'group' && channel.name && channel.name.trim() ? channel.name.trim() : `Channel #${channel.id}`}</h3>
               <span class="channel-type-badge type-${channel.channel_type}">${getChannelTypeText(channel.channel_type)}</span>
             </div>
           </div>

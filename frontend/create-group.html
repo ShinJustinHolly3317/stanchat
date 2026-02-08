@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Group - StanChat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      color: #333;
+      font-size: 24px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 15px;
+    }
+
+    .nav-links a {
+      color: #667eea;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .nav-links a:hover {
+      background: #f5f5f5;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      color: #666;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .form-group input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .friends-section-title {
+      color: #333;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .friend-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .friend-row:last-child {
+      border-bottom: none;
+    }
+
+    .friend-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+
+    .friend-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .friend-nickname {
+      color: #333;
+      font-size: 16px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+    }
+
+    .error {
+      background: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .error.show {
+      display: block;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Create Group</h1>
+      <div class="nav-links">
+        <a href="welcome.html">Home</a>
+        <a href="channels.html">Channels</a>
+        <a href="friends-list.html">Friends</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>New Group</h2>
+      <div class="error" id="error"></div>
+      <div class="loading" id="loading">Loading friends...</div>
+      <div id="formArea" style="display: none;">
+        <div class="form-group">
+          <label for="groupName">Group name (optional)</label>
+          <input type="text" id="groupName" placeholder="e.g. Weekend Squad" maxlength="100">
+        </div>
+        <div class="form-group">
+          <span class="friends-section-title">Select members (at least one)</span>
+          <div id="friendsList"></div>
+        </div>
+        <button type="button" class="btn btn-primary" id="submitBtn">Create group</button>
+      </div>
+      <div id="emptyState" class="empty-state" style="display: none;">
+        <p>No friends yet</p>
+        <p style="margin-top: 10px; font-size: 12px;">Add friends first from the Friends page.</p>
+        <a href="friends-search.html" style="color: #667eea; margin-top: 12px; display: inline-block;">Search for friends</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import FriendsAPI from './friends-api.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    import { SUPABASE_CONFIG } from './config.js';
+
+    const supabase = createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    const loadingEl = document.getElementById('loading');
+    const formArea = document.getElementById('formArea');
+    const emptyState = document.getElementById('emptyState');
+    const friendsList = document.getElementById('friendsList');
+    const groupNameInput = document.getElementById('groupName');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorDiv = document.getElementById('error');
+
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.classList.add('show');
+    }
+
+    function hideError() {
+      errorDiv.classList.remove('show');
+    }
+
+    async function loadFriends() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        const result = await FriendsAPI.getFriends();
+        const friends = result.friends || [];
+
+        loadingEl.style.display = 'none';
+
+        if (friends.length === 0) {
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        formArea.style.display = 'block';
+        friends.forEach((friend) => {
+          const row = document.createElement('div');
+          row.className = 'friend-row';
+          const firstLetter = (friend.nickname || 'U')[0].toUpperCase();
+          const avatarStyle = friend.avatar_url
+            ? `background-image: url('${friend.avatar_url}'); background-size: cover;`
+            : '';
+          row.innerHTML = `
+            <input type="checkbox" id="friend-${friend.user_id}" value="${friend.user_id}" data-user-id="${friend.user_id}">
+            <label for="friend-${friend.user_id}" style="flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+              <div class="friend-avatar" style="${avatarStyle}">${friend.avatar_url ? '' : firstLetter}</div>
+              <span class="friend-nickname">${friend.nickname || 'Unknown'}</span>
+            </label>
+          `;
+          friendsList.appendChild(row);
+        });
+      } catch (error) {
+        loadingEl.style.display = 'none';
+        showError(error.message || 'Failed to load friends');
+      }
+    }
+
+    async function handleSubmit() {
+      hideError();
+      const checkboxes = friendsList.querySelectorAll('input[type="checkbox"]:checked');
+      const memberIds = Array.from(checkboxes).map((cb) => cb.value);
+
+      if (memberIds.length === 0) {
+        showError('Select at least one member');
+        return;
+      }
+
+      const name = groupNameInput.value.trim() || undefined;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating...';
+
+      try {
+        const data = await FriendsAPI.createGroup({ name, member_ids: memberIds });
+        const channelId = data?.channel_id;
+        if (channelId != null) {
+          window.location.href = `chat.html?channel_id=${channelId}`;
+        } else {
+          showError('Invalid response from server');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create group';
+        }
+      } catch (error) {
+        showError(error.message || 'Failed to create group');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create group';
+      }
+    }
+
+    submitBtn.addEventListener('click', handleSubmit);
+    loadFriends();
+  </script>
+</body>
+</html>

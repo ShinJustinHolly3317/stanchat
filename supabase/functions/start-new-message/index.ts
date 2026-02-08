@@ -49,6 +49,31 @@ serve(async (req) => {
       return jsonErr('1100', 'content is required (non-empty string)', 400);
     }
 
+    // 驗證使用者為頻道成員
+    /**
+     * @typedef {Object} ChannelUserRow
+     * @property {number} channel_id - 頻道 ID (channel_users.channel_id)
+     */
+    /** @type {{ data: ChannelUserRow[] | null, error: any }} */
+    const { data: channelUser, error: channelUserError } = await supabase
+      .from('channel_users')
+      .select('channel_id')
+      .eq('channel_id', channelId)
+      .eq('uid', user.id)
+      .maybeSingle();
+
+    if (channelUserError) {
+      return jsonErr(
+        '9000',
+        `Failed to verify channel membership: ${channelUserError.message}`,
+        500
+      );
+    }
+
+    if (!channelUser) {
+      return jsonErr('1004', 'Forbidden: User is not a member of this channel', 403);
+    }
+
     /**
      * @typedef {Object} QuestionRow
      * @property {number} id - 題目 ID (between_chat_questions.id)

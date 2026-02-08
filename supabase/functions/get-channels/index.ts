@@ -65,12 +65,13 @@ serve(async (req) => {
      * @typedef {Object} ChatChannelRow
      * @property {number} id - 頻道 ID (chat_channels.id)
      * @property {string} channel_type - 頻道類型 (chat_channels.channel_type)
+     * @property {string|null} name - 頻道名稱（群組用）(chat_channels.name)
      */
     /** @type {{ data: ChatChannelRow[] | null, error: any }} */
     // 查詢頻道詳細資訊
     const { data: channels, error: channelsError } = await supabase
       .from('chat_channels')
-      .select('id, channel_type')
+      .select('id, channel_type, name')
       .in('id', channelIds)
       .order('id', { ascending: false });
 
@@ -126,6 +127,7 @@ serve(async (req) => {
           return {
             id: channel.id,
             channel_type: channel.channel_type,
+            name: channel.name ?? null,
             users: [],
             unread_count: 0,
           };
@@ -191,6 +193,7 @@ serve(async (req) => {
         return {
           id: channel.id,
           channel_type: channel.channel_type,
+          name: channel.name ?? null,
           users: users,
           last_message: latestByChannel.get(channel.id)
             ? {

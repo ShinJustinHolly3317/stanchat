@@ -208,6 +208,28 @@ class FriendsAPI {
   }
 
   /**
+   * 建立群組頻道
+   * @param {{ name?: string, member_ids: string[] }} opts - name 可選，member_ids 為好友 UUID 陣列
+   */
+  async createGroup(opts) {
+    const token = await this.getAuthToken();
+
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/create-group`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: opts.name || '預設群組名稱',
+        member_ids: opts.member_ids,
+      }),
+    });
+
+    return await this.parseEnvelope(response);
+  }
+
+  /**
    * 建立 pending message 並取得問題
    */
   async createPendingMessage(channelId, content) {

@@ -466,14 +466,20 @@
     async function loadChannelInfo() {
       try {
         const channels = await FriendsAPI.getChannels();
-        const channel = channels.channels?.find((c) => c.id === channelId);
+        const channel = channels.channels?.find((c) => c.id == channelId);
         
         if (channel) {
-          const otherUser = channel.users?.find((u) => u.uid !== currentUserId);
-          if (otherUser) {
-            channelTitle.textContent = otherUser.nickname || 'Chat';
+          if (channel.channel_type === 'group') {
+            channelTitle.textContent = channel.name && channel.name.trim()
+              ? channel.name.trim()
+              : `Group (${channel.users?.length ?? 0} members)`;
           } else {
-            channelTitle.textContent = `Channel #${channel.id.slice(0, 8)}`;
+            const otherUser = channel.users?.find((u) => u.id && String(u.id) !== String(currentUserId));
+            if (otherUser) {
+              channelTitle.textContent = otherUser.nickname || 'Chat';
+            } else {
+              channelTitle.textContent = `Channel #${String(channel.id).slice(0, 8)}`;
+            }
           }
         }
       } catch (error) {

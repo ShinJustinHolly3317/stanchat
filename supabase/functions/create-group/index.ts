@@ -1,0 +1,135 @@
+// 建立群組頻道 Edge Function
+// 僅建立群組，不處理邀請接受、管理員、退群等
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.8';
+import { corsHeaders } from '../_shared/cors.ts';
+import { jsonErr, jsonOk } from '../_shared/responses.ts';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(s: string): boolean {
+  return typeof s === 'string' && UUID_REGEX.test(s);
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return jsonErr('1001', 'Missing authorization header', 401);
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return jsonErr('1002', 'Unauthorized', 401);
+    }
+
+    const currentUserId = user.id;
+
+    const body = await req.json().catch(() => ({}));
+    const name = body?.name != null ? String(body.name).trim() || null : null;
+    const memberIdsRaw = body?.member_ids;
+
+    if (!Array.isArray(memberIdsRaw) || memberIdsRaw.length === 0) {
+      return jsonErr('1100', 'member_ids is required (non-empty array of UUIDs)', 400);
+    }
+
+    const memberIds = [...new Set(memberIdsRaw)].filter(
+      (id): id is string => typeof id === 'string' && isValidUuid(id)
+    );
+
+    if (memberIds.length === 0) {
+      return jsonErr('1100', 'member_ids must contain at least one valid UUID', 400);
+    }
+
+    /**
+     * @typedef {Object} FriendshipRow
+     * @property {string} user_one_id
+     * @property {string} user_two_id
+     */
+    /** @type {{ data: FriendshipRow[] | null, error: any }} */
+    const { data: friendships, error: friendshipsError } = await supabase
+      .from('friendships')
+      .select('user_one_id, user_two_id')
+      .eq('status', 'friend')
+      .or(`user_one_id.eq.${currentUserId},user_two_id.eq.${currentUserId}`);
+
+    if (friendshipsError) {
+      return jsonErr('9000', `Failed to fetch friends: ${friendshipsError.message}`, 500);
+    }
+
+    const friendIds = new Set(
+      (friendships || []).map((f) =>
+        f.user_one_id === currentUserId ? f.user_two_id : f.user_one_id
+      )
+    );
+
+    const notFriends = memberIds.filter((id) => !friendIds.has(id));
+    if (notFriends.length > 0) {
+      return jsonErr('1004', 'All members must be accepted friends', 403);
+    }
+
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    /**
+     * @typedef {Object} ChatChannelRow
+     * @property {number} id - 頻道 ID
+     */
+    /** @type {{ data: ChatChannelRow | null, error: any }} */
+    const insertChannelPayload: { channel_type: string; name?: string } = {
+      channel_type: 'group',
+    };
+    if (name != null) {
+      insertChannelPayload.name = name;
+    }
+
+    const { data: channel, error: channelError } = await serviceClient
+      .from('chat_channels')
+      .insert(insertChannelPayload)
+      .select('id')
+      .single();
+
+    if (channelError || !channel) {
+      return jsonErr('9000', `Failed to create channel: ${channelError?.message ?? 'unknown'}`, 500);
+    }
+
+    const allUids = [currentUserId, ...memberIds];
+    const uniqueUids = [...new Set(allUids)];
+
+    const channelUserRows = uniqueUids.map((uid) => ({
+      channel_id: channel.id,
+      uid,
+    }));
+
+    const { error: insertUsersError } = await serviceClient
+      .from('channel_users')
+      .insert(channelUserRows);
+
+    if (insertUsersError) {
+      return jsonErr(
+        '9000',
+        `Failed to add channel members: ${insertUsersError.message}`,
+        500
+      );
+    }
+
+    return jsonOk({ channel_id: channel.id });
+  } catch (error) {
+    return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
+  }
+});

@@ -93,11 +93,12 @@ serve(async (req) => {
      * @typedef {Object} ChatChannelRow
      * @property {number} id - 頻道 ID (chat_channels.id)
      * @property {string} channel_type - 頻道類型 (chat_channels.channel_type)
+     * @property {string|null} name - 頻道名稱（群組用）(chat_channels.name)
      */
     /** @type {{ data: ChatChannelRow[] | null, error: any }} */
     const { data: chatChannelRows, error: channelsError } = await supabase
       .from('chat_channels')
-      .select('id, channel_type')
+      .select('id, channel_type, name')
       .in('id', channelIds);
 
     if (channelsError) {
@@ -239,6 +240,7 @@ serve(async (req) => {
         return {
           id: ch.id,
           channel_type: ch.channel_type,
+          name: ch.name ?? null,
           users,
           last_message: last
             ? {
