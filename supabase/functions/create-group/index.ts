@@ -96,6 +96,8 @@ serve(async (req) => {
     };
     if (name != null) {
       insertChannelPayload.name = name || '預設群組名稱';
+    } else {
+      insertChannelPayload.name = '預設群組名稱';
     }
 
     const { data: channel, error: channelError } = await serviceClient
