@@ -141,7 +141,7 @@ class FriendsAPI {
 
     const token = await this.getAuthToken();
 
-    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/accept-invitation`, {
+    const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/handle-invitation`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,

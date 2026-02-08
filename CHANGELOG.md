@@ -2,6 +2,56 @@
 
 ## [Unreleased]
 
+### Added - 2026-02-08
+
+#### 群組頻道（建立群組）功能
+
+新增「建立群組」功能，使用者可建立群組頻道並與多位好友一起聊天。此版本僅支援建立群組，不包含邀請接受、管理員或退群等流程。
+
+**資料庫變更：**
+
+- `chat_channels` 新增可選欄位 `name` (text, nullable)，用於群組顯示名稱。
+
+**新增 Edge Function：create-group**
+
+- **路徑：** `POST /functions/v1/create-group`
+- **請求 body：**
+  - `member_ids` (必填)：要加入群組的好友 UUID 陣列，須為已接受的好友。
+  - `name` (可選)：群組顯示名稱。
+- **回應：** `{ code: "0000", data: { channel_id: number } }`
+- **邏輯：** 建立 `channel_type: 'group'` 的頻道，並將當前使用者與 `member_ids` 中的使用者寫入 `channel_users`。僅接受「已為好友」的成員。
+- **錯誤碼：** `1100` 參數錯誤、`1004` 成員非全部為好友、`9000` 伺服器錯誤。
+
+**前端變更：**
+
+- **friends-api.js**：新增 `createGroup({ name?, member_ids })`，呼叫 create-group Edge Function。
+- **channels.html**：新增「Create group」按鈕，連結至建立群組頁面；群組頻道若有 `name` 則在頻道卡片標題顯示名稱。
+- **create-group.html**（新頁面）：可選群組名稱、從好友列表多選成員、送出後呼叫 create-group 並導向 `chat.html?channel_id=<id>`。
+- **chat.html**：`loadChannelInfo()` 調整：
+  - 群組頻道：標題顯示 `channel.name` 或 `Group (N members)`。
+  - 一對一頻道：以 `u.id` 正確解析對方使用者並顯示暱稱。
+
+**既有行為：**
+
+- 群組訊息寫入與廣播沿用既有 `commit-message`（對所有 `channel_users` 廣播 `channel_lst_msg_update`）。
+- 聊天室頁面已訂閱 `chat_messages` 的 `postgres_changes`，群組新訊息即時顯示無需額外修改。
+
+---
+
+### Changed - 2026-02-08
+
+#### get-channels / init-app-session：頻道回應新增 name
+
+- **get-channels**、**init-app-session** 回傳的每個頻道物件新增 `name` 欄位（string | null）。
+- 查詢 `chat_channels` 時改為 select `id, channel_type, name`，供群組顯示名稱使用。
+
+#### get-messages / start-new-message：頻道成員驗證
+
+- **get-messages**：在回傳訊息前先檢查當前使用者是否為該頻道成員（查詢 `channel_users`）。非成員回傳 `403`（code `1004`）。
+- **start-new-message**：在建立 pending message 前同樣檢查頻道成員資格，非成員回傳 `403`（code `1004`）。
+
+---
+
 ### Changed - 2026-01-25
 
 #### commit-message: 更新 broadcast payload schema
