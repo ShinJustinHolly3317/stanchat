@@ -148,7 +148,7 @@ serve(async (req) => {
       // 取得頻道資訊
       const { data: channel, error: channelError } = await serviceClient
         .from('chat_channels')
-        .select('id, channel_type')
+        .select('id, channel_type, name')
         .eq('id', pending.channel_id)
         .maybeSingle();
 
@@ -198,6 +198,10 @@ serve(async (req) => {
       const payload = {
         id: channel.id,
         channel_type: channel.channel_type,
+        channel_name:
+          channel.channel_type === 'group'
+            ? channel.name
+            : userProfiles.filter((p) => p.uid !== user.id).map((p) => p.name)[0],
         users: users,
         last_message: inserted
           ? {

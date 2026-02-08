@@ -171,7 +171,7 @@ serve(async (req) => {
         let unreadCount = 0;
         if (!messagesError && channelMessages && channelMessages.length > 0) {
           const messageIds = channelMessages.map((m) => m.id);
-          
+
           // 取得已讀的訊息 ID
           /**
            * @typedef {Object} MessageReadRow
@@ -193,7 +193,10 @@ serve(async (req) => {
         return {
           id: channel.id,
           channel_type: channel.channel_type,
-          name: channel.name ?? null,
+          name:
+            channel.channel_type === 'group'
+              ? channel.name
+              : userProfiles.filter((p) => p.uid !== currentUserId).map((p) => p.name)[0],
           users: users,
           last_message: latestByChannel.get(channel.id)
             ? {

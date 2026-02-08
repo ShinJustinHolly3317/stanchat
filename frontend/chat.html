@@ -415,7 +415,7 @@
       const path = `${currentUserId}/${pendingId}/${ts}${ext}`;
 
       const { data, error } = await supabase.storage.from('stancode-voices').upload(path, file, {
-        upsert: false,
+        upsert: true,
         contentType: file.type || undefined,
       });
 

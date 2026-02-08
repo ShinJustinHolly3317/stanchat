@@ -219,7 +219,7 @@ serve(async (req) => {
         let unreadCount = 0;
         if (!messagesError && channelMessages && channelMessages.length > 0) {
           const messageIds = channelMessages.map((m) => m.id);
-          
+
           /**
            * @typedef {Object} MessageReadRow
            * @property {number} message_id - 訊息 ID (message_reads.message_id)
@@ -240,7 +240,10 @@ serve(async (req) => {
         return {
           id: ch.id,
           channel_type: ch.channel_type,
-          name: ch.name ?? null,
+          name:
+            ch.channel_type === 'group'
+              ? ch.name
+              : members.filter((uid) => uid !== user.id).map((uid) => profileMap.get(uid)?.name)[0],
           users,
           last_message: last
             ? {
