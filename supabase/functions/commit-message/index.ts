@@ -97,11 +97,10 @@ serve(async (req) => {
      * @property {string} message_content - 訊息內容 (chat_messages.message_content)
      * @property {string} uid - 發送者 UUID (chat_messages.uid)
      * @property {number} created_at - 建立時間戳（毫秒）(chat_messages.created_at)
+     * @property {string|null} audio_url - 音檔網址 (chat_messages.audio_url)
      */
     /** @type {{ data: ChatMessageRow | null, error: any }} */
     // Write final message
-    // NOTE: We only insert the minimal fields we know from the project docs/code.
-    // If your DB schema has additional required fields, we can adjust later.
     const now = Date.now();
     const { data: inserted, error: insertError } = await supabase
       .from('chat_messages')
@@ -113,10 +112,9 @@ serve(async (req) => {
         sender_name: senderName,
         created_at: now,
         updated_at: now,
-        // audioPath is accepted but not persisted yet (per your requirement)
-        // audio_path: audioPath,
+        audio_url: audioPath || null,
       })
-      .select('id, channel_id, message_content, uid, created_at')
+      .select('id, channel_id, message_content, uid, created_at, audio_url')
       .maybeSingle();
 
     if (insertError) {
@@ -210,6 +208,7 @@ serve(async (req) => {
               nickname: senderName,
               message_content: inserted.message_content,
               created_at: inserted.created_at,
+              audio_url: inserted.audio_url || null,
             }
           : null,
         unread_count: 0,
@@ -232,11 +231,12 @@ serve(async (req) => {
       status: 'success',
       is_correct: true,
       // accepted but not validated/persisted yet
-      ...(audioPath ? { audio_path: audioPath } : {}),
+      ...(audioPath ? { audio_url: audioPath } : {}),
       message_record: {
         id: inserted?.id ?? null,
         channel_id: inserted?.channel_id ?? pending.channel_id,
         content: inserted?.message_content ?? pending.content,
+        audio_url: inserted?.audio_url || null,
         created_at: inserted?.created_at ?? now,
       },
     });

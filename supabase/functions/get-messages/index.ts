@@ -71,11 +71,12 @@ serve(async (req) => {
      * @property {string} uid - 發送者 UUID (chat_messages.uid)
      * @property {string} message_content - 訊息內容 (chat_messages.message_content)
      * @property {number} created_at - 建立時間戳（毫秒）(chat_messages.created_at)
+     * @property {string|null} audio_url - 音檔網址 (chat_messages.audio_url)
      */
     /** @type {{ data: ChatMessageRow[] | null, error: any }} */
     let q = supabase
       .from('chat_messages')
-      .select('id, channel_id, uid, message_content, created_at')
+      .select('id, channel_id, uid, message_content, created_at, audio_url')
       .eq('channel_id', channelId)
       .order('id', { ascending: false })
       .limit(PAGE_SIZE);
@@ -179,6 +180,7 @@ serve(async (req) => {
         msg_type: 'text',
         created_at: m.created_at,
         read_count: readCount,
+        audio_url: m.audio_url || null,
       };
     });
 

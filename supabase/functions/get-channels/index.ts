@@ -86,13 +86,14 @@ serve(async (req) => {
      * @property {string} uid - 發送者 UUID (chat_messages.uid)
      * @property {string} message_content - 訊息內容 (chat_messages.message_content)
      * @property {number} created_at - 建立時間戳（毫秒）(chat_messages.created_at)
+     * @property {string|null} audio_url - 音檔網址 (chat_messages.audio_url)
      */
     /** @type {{ data: ChatMessageRow[] | null, error: any }} */
     // 取得每個頻道的最新訊息（一次查回來再做 mapping）
     // NOTE: 這裡假設 chat_messages.created_at 可排序（timestamp 或可比較字串）
     const { data: latestMessages, error: latestError } = await supabase
       .from('chat_messages')
-      .select('id, channel_id, uid, message_content, created_at')
+      .select('id, channel_id, uid, message_content, created_at, audio_url')
       .in('channel_id', channelIds)
       .order('created_at', { ascending: false })
       .limit(5000);
@@ -204,6 +205,7 @@ serve(async (req) => {
                 uid: latestByChannel.get(channel.id).uid,
                 message_content: latestByChannel.get(channel.id).message_content,
                 created_at: latestByChannel.get(channel.id).created_at,
+                audio_url: latestByChannel.get(channel.id).audio_url || null,
               }
             : null,
           unread_count: unreadCount,
