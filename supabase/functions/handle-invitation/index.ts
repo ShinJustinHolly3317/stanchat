@@ -197,14 +197,17 @@ serve(async (req) => {
          * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
          * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
          */
-        /** @type {{ data: UserProfileRow | null, error: any }} */
-        // 發送通知給發送邀請的使用者
-        const { data: currentProfile } = await serviceClient
+        /** @type {{ data: UserProfileRow[] | null, error: any }} */
+        // 取得兩個使用者的詳細資訊
+        const { data: userProfiles } = await serviceClient
           .from('user_profile')
           .select('uid, name, custom_user_id, image_url')
-          .eq('uid', currentUserId)
-          .maybeSingle();
+          .in('uid', [currentUserId, targetUserId]);
 
+        const currentProfile = userProfiles?.find((p) => p.uid === currentUserId);
+        const targetProfile = userProfiles?.find((p) => p.uid === targetUserId);
+
+        // 發送好友邀請接受通知給發送邀請的使用者
         await serviceClient.channel(`user:${targetUserId}`).send({
           type: 'broadcast',
           event: 'friend_request_accepted',
@@ -219,6 +222,52 @@ serve(async (req) => {
             channel_id: channelId,
           },
         });
+
+        // Broadcast channel creation to both users
+        try {
+          const users = [
+            {
+              id: currentUserId,
+              nickname: currentProfile?.name || currentProfile?.custom_user_id || 'Unknown User',
+              avatar_url: currentProfile?.image_url || null,
+            },
+            {
+              id: targetUserId,
+              nickname: targetProfile?.name || targetProfile?.custom_user_id || 'Unknown User',
+              avatar_url: targetProfile?.image_url || null,
+            },
+          ];
+
+          const payload = {
+            id: channel.id,
+            channel_type: 'direct',
+            channel_name: targetProfile?.name || targetProfile?.custom_user_id || 'Unknown User',
+            users: users,
+            last_message: null, // 新建立的頻道沒有訊息
+            unread_count: 0,
+          };
+
+          await Promise.all([
+            serviceClient.channel(`channel_lst_msg:${currentUserId}`).send({
+              type: 'broadcast',
+              event: 'channel_lst_msg_update',
+              payload: {
+                ...payload,
+                channel_name: targetProfile?.name || targetProfile?.custom_user_id || 'Unknown User',
+              },
+            }),
+            serviceClient.channel(`channel_lst_msg:${targetUserId}`).send({
+              type: 'broadcast',
+              event: 'channel_lst_msg_update',
+              payload: {
+                ...payload,
+                channel_name: currentProfile?.name || currentProfile?.custom_user_id || 'Unknown User',
+              },
+            }),
+          ]);
+        } catch (broadcastError) {
+          console.warn('Failed to broadcast channel creation:', broadcastError);
+        }
       }
     } else {
       // 拒絕邀請：刪除記錄或更新狀態

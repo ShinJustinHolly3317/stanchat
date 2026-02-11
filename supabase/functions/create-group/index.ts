@@ -130,6 +130,67 @@ serve(async (req) => {
       );
     }
 
+    // Broadcast channel creation to all members
+    try {
+      /**
+       * @typedef {Object} ChannelUserRow
+       * @property {string} uid - 使用者 UUID (channel_users.uid)
+       */
+      /** @type {{ data: ChannelUserRow[] | null, error: any }} */
+      // 取得頻道中的所有使用者
+      const { data: channelUsers, error: usersError } = await serviceClient
+        .from('channel_users')
+        .select('uid')
+        .eq('channel_id', channel.id);
+
+      if (usersError || !channelUsers) {
+        console.warn('Failed to fetch channel users for broadcast:', usersError);
+      } else {
+        /**
+         * @typedef {Object} UserProfileRow
+         * @property {string} uid - 使用者 UUID (user_profile.uid)
+         * @property {string|null} name - 使用者名稱 (user_profile.name)
+         * @property {string|null} custom_user_id - 自訂使用者 ID (user_profile.custom_user_id)
+         * @property {string|null} image_url - 頭像 URL (user_profile.image_url)
+         */
+        /** @type {{ data: UserProfileRow[] | null, error: any }} */
+        // 取得使用者詳細資訊
+        const userIds = channelUsers.map((cu) => cu.uid);
+        const { data: userProfiles } = await serviceClient
+          .from('user_profile')
+          .select('uid, name, custom_user_id, image_url')
+          .in('uid', userIds);
+
+        const users =
+          userProfiles?.map((profile) => ({
+            id: profile.uid,
+            nickname: profile.name || profile.custom_user_id || 'Unknown User',
+            avatar_url: profile.image_url || null,
+          })) || [];
+
+        const payload = {
+          id: channel.id,
+          channel_type: 'group',
+          channel_name: name || '預設群組名稱',
+          users: users,
+          last_message: null, // 新建立的頻道沒有訊息
+          unread_count: 0,
+        };
+
+        await Promise.all(
+          channelUsers.map((m) =>
+            serviceClient.channel(`channel_lst_msg:${m.uid}`).send({
+              type: 'broadcast',
+              event: 'channel_lst_msg_update',
+              payload,
+            })
+          )
+        );
+      }
+    } catch (broadcastError) {
+      console.warn('Failed to broadcast channel creation:', broadcastError);
+    }
+
     return jsonOk({ channel_id: channel.id });
   } catch (error) {
     return jsonErr('9000', error instanceof Error ? error.message : 'Unknown error', 500);
