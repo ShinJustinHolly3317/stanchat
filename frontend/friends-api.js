@@ -260,7 +260,7 @@ class FriendsAPI {
     const body = {
       pending_id: pendingId,
       category: category,
-      ...(audioPath ? { audio_path: audioPath } : {}),
+      ...(audioPath ? { audio_url: audioPath } : {}),
     };
 
     const response = await fetch(`${SUPABASE_CONFIG.url}/functions/v1/commit-message`, {

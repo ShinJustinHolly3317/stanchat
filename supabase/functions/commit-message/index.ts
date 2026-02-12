@@ -39,7 +39,7 @@ serve(async (req) => {
     const pendingId = body?.pending_id;
     const category = body?.category;
     // accepted but unused for now
-    const audioPath = body?.audio_path;
+    const audioPath = body?.audio_url;
 
     if (!pendingId) {
       return jsonErr('1100', 'pending_id is required (string)', 400);
