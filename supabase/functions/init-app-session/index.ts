@@ -196,7 +196,7 @@ serve(async (req) => {
           .map((uid) => {
             const p = profileMap.get(uid);
             return {
-              id: uid,
+              uid: uid,
               nickname: p?.name || p?.custom_user_id || 'Unknown',
               avatar_url: p?.image_url || null,
             };
