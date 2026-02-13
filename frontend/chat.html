@@ -470,8 +470,8 @@
         
         if (channel) {
           if (channel.channel_type === 'group') {
-            channelTitle.textContent = channel.name && channel.name.trim()
-              ? channel.name.trim()
+            channelTitle.textContent = channel.channel_name && channel.channel_name.trim()
+              ? channel.channel_name.trim()
               : `Group (${channel.users?.length ?? 0} members)`;
           } else {
             const otherUser = channel.users?.find((u) => u.id && String(u.id) !== String(currentUserId));

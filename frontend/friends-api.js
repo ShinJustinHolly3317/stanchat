@@ -221,7 +221,7 @@ class FriendsAPI {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: opts.name,
+        channel_name: opts.name,
         member_ids: opts.member_ids,
       }),
     });

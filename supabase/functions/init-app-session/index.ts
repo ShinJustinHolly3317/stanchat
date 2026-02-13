@@ -241,7 +241,7 @@ serve(async (req) => {
         return {
           id: ch.id,
           channel_type: ch.channel_type,
-          name:
+          channel_name:
             ch.channel_type === 'group'
               ? ch.name
               : members.filter((uid) => uid !== user.id).map((uid) => profileMap.get(uid)?.name)[0],

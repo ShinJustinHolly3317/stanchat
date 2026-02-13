@@ -41,7 +41,7 @@ serve(async (req) => {
     const currentUserId = user.id;
 
     const body = await req.json().catch(() => ({}));
-    const name = body?.name != null ? String(body.name).trim() || null : null;
+    const name = body?.channel_name != null ? String(body.channel_name).trim() || null : null;
     const memberIdsRaw = body?.member_ids;
 
     if (!Array.isArray(memberIdsRaw) || memberIdsRaw.length === 0) {

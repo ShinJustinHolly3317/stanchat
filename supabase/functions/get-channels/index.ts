@@ -128,7 +128,7 @@ serve(async (req) => {
           return {
             id: channel.id,
             channel_type: channel.channel_type,
-            name: channel.name ?? null,
+            channel_name: channel.name ?? null,
             users: [],
             unread_count: 0,
           };
@@ -194,7 +194,7 @@ serve(async (req) => {
         return {
           id: channel.id,
           channel_type: channel.channel_type,
-          name:
+          channel_name:
             channel.channel_type === 'group'
               ? channel.name
               : userProfiles.filter((p) => p.uid !== currentUserId).map((p) => p.name)[0],
