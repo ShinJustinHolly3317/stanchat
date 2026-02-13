@@ -156,6 +156,12 @@ serve(async (req) => {
             avatar_url: profile.image_url || null,
           })) || [];
 
+        // 建立 uid 到 nickname 的對應表（用於 last_message）
+        const nicknameMap = new Map();
+        userProfiles?.forEach((profile) => {
+          nicknameMap.set(profile.uid, profile.name || profile.custom_user_id || 'Unknown User');
+        });
+
         // 計算未讀訊息數量
         // 取得頻道中所有訊息（排除自己發送的）
         /**
@@ -203,6 +209,7 @@ serve(async (req) => {
             ? {
                 id: latestByChannel.get(channel.id).id,
                 uid: latestByChannel.get(channel.id).uid,
+                nickname: nicknameMap.get(latestByChannel.get(channel.id).uid) || 'Unknown User',
                 message_content: latestByChannel.get(channel.id).message_content,
                 created_at: latestByChannel.get(channel.id).created_at,
                 audio_url: latestByChannel.get(channel.id).audio_url || null,

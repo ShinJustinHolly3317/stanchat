@@ -250,6 +250,10 @@ serve(async (req) => {
             ? {
                 id: last.id,
                 uid: last.uid,
+                nickname:
+                  profileMap.get(last.uid)?.name ||
+                  profileMap.get(last.uid)?.custom_user_id ||
+                  'Unknown User',
                 message_content: last.message_content,
                 created_at: last.created_at,
                 audio_url: last.audio_url || null,

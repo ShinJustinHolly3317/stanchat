@@ -336,7 +336,12 @@
         .join('');
 
       const lastMessage = channel.last_message;
-      const lastText = lastMessage?.message_content ? lastMessage.message_content : 'No messages yet';
+      // 對於群組頻道，顯示發送者暱稱；對於直接訊息，只顯示訊息內容
+      const lastText = lastMessage?.message_content
+        ? (channel.channel_type === 'group' && lastMessage.nickname
+            ? `${lastMessage.nickname}: ${lastMessage.message_content}`
+            : lastMessage.message_content)
+        : 'No messages yet';
       const lastTime = lastMessage?.created_at ? new Date(lastMessage.created_at).toLocaleString() : '';
       
       const unreadCount = channel.unread_count || 0;
@@ -424,9 +429,15 @@
       const card = channelCardMap.get(String(channelId));
       if (!card) return;
 
-      const lastText = payload?.last_message?.message_content || 'No messages yet';
-      const lastTime = payload?.last_message?.created_at
-        ? new Date(payload.last_message.created_at).toLocaleString()
+      // 對於群組頻道，顯示發送者暱稱；對於直接訊息，只顯示訊息內容
+      const lastMessage = payload?.last_message;
+      const lastText = lastMessage?.message_content
+        ? (payload?.channel_type === 'group' && lastMessage.nickname
+            ? `${lastMessage.nickname}: ${lastMessage.message_content}`
+            : lastMessage.message_content)
+        : 'No messages yet';
+      const lastTime = lastMessage?.created_at
+        ? new Date(lastMessage.created_at).toLocaleString()
         : '';
 
       const textEl = card.querySelector('.last-message-text');
