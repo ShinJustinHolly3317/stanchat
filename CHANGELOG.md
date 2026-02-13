@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+### Changed - 2026-02-13
+
+#### API 回應欄位統一與新增
+
+- **get-channels/index.ts**
+  - 頻道物件中的 `name` 欄位更新成 `channel_name`
+  - `last_message` 物件新增 `nickname` 欄位（發送者暱稱）
+
+- **init-app-session/index.ts**
+  - 頻道物件中的 `name` 欄位更新成 `channel_name`
+  - `last_message` 物件新增 `nickname` 欄位（發送者暱稱）
+  - `user_profile` 物件中的 `uid` 欄位更新成 `id`
+
+- **create-group/index.ts**
+  - 請求 body 中的 `name` 欄位更新成 `channel_name`
+
+- **commit-message/index.ts**
+  - Realtime 廣播 payload 中的 `last_message` 物件已包含 `nickname` 欄位（與 get-channels 保持一致）
+
+---
+
 ### Added - 2026-02-08
 
 #### 群組頻道（建立群組）功能
