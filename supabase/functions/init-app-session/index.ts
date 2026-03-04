@@ -59,7 +59,7 @@ serve(async (req) => {
     }
 
     const userProfile = {
-      id: user.id,
+      uid: user.id,
       nickname: profile?.name || profile?.custom_user_id || 'Unknown',
       avatar_url: profile?.image_url || null,
     };
